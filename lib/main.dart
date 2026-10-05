@@ -1,36 +1,62 @@
 import 'package:flutter/material.dart';
+import 'package:dynamic_color/dynamic_color.dart';
+
+import 'Screens/core_page.dart';
+import 'Screens/item_list_screen.dart';
+
 
 void main() {
-  runApp(const MyApp());
+  runApp(const HEAPApp());
 }
 
-class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+class HEAPApp extends StatelessWidget {
+  const HEAPApp({super.key});
 
-  // This widget is the root of your application.
+  // GLOBAL COLOR
+  // Define fallback color schemes for unsupported devices/platforms
+  static final _defaultLightColorScheme = ColorScheme.fromSeed(
+    seedColor: Colors.deepPurple,
+    brightness: Brightness.light,
+  );
+  static final _defaultDarkColorScheme = ColorScheme.fromSeed(
+    seedColor: Colors.deepPurple,
+    brightness: Brightness.dark,
+  );
+
+
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Flutter Demo',
-      theme: ThemeData(
-        // This is the theme of your application.
-        //
-        // TRY THIS: Try running your application with "flutter run". You'll see
-        // the application has a purple toolbar. Then, without quitting the app,
-        // try changing the seedColor in the colorScheme below to Colors.green
-        // and then invoke "hot reload" (save your changes or press the "hot
-        // reload" button in a Flutter-supported IDE, or press "r" if you used
-        // the command line to start the app).
-        //
-        // Notice that the counter didn't reset back to zero; the application
-        // state is not lost during the reload. To reset the state, use hot
-        // restart instead.
-        //
-        // This works for code too, not just values: Most code changes can be
-        // tested with just a hot reload.
-        colorScheme: .fromSeed(seedColor: Colors.deepPurple),
-      ),
-      home: const MyHomePage(title: 'Flutter Demo Home Page'),
+    // DynamicColorBuilder provides device color schemes if available
+    return DynamicColorBuilder(
+      builder: (ColorScheme? lightDynamic, ColorScheme? darkDynamic) {
+        ColorScheme lightScheme;
+        ColorScheme darkScheme;
+
+        if (lightDynamic != null && darkDynamic != null) {
+          // Harmonize colors if needed or use system colors directly
+          lightScheme = lightDynamic.harmonized();
+          darkScheme = darkDynamic.harmonized();
+        } else {
+          // Fall back to custom app brand colors
+          lightScheme = _defaultLightColorScheme;
+          darkScheme = _defaultDarkColorScheme;
+        }
+
+        return MaterialApp(
+          title: 'Dynamic Color Demo',
+          theme: ThemeData(
+            useMaterial3: true,
+            colorScheme: lightScheme,
+          ),
+          darkTheme: ThemeData(
+            useMaterial3: true,
+            colorScheme: darkScheme,
+          ),
+          // home: const MyHomePage(title: 'Flutter Demo Home Page'),
+          // home: const ItemListScreen(),
+          home: const CorePage(),
+        );
+      },
     );
   }
 }
@@ -69,6 +95,7 @@ class _MyHomePageState extends State<MyHomePage> {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
     // This method is rerun every time setState is called, for instance as done
     // by the _incrementCounter method above.
     //
@@ -77,13 +104,8 @@ class _MyHomePageState extends State<MyHomePage> {
     // than having to individually change instances of widgets.
     return Scaffold(
       appBar: AppBar(
-        // TRY THIS: Try changing the color here to a specific color (to
-        // Colors.amber, perhaps?) and trigger a hot reload to see the AppBar
-        // change color while the other colors stay the same.
-        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
-        // Here we take the value from the MyHomePage object that was created by
-        // the App.build method, and use it to set our appbar title.
-        title: Text(widget.title),
+        title: const Text('Material 3 Dynamic Color'),
+        backgroundColor: colorScheme.surfaceContainer,
       ),
       body: Center(
         // Center is a layout widget. It takes a single child and positions it
