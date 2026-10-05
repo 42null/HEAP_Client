@@ -16,7 +16,7 @@ class ItemListScreen extends StatelessWidget {
           final item = sampleItems[index];
           return ListTile(
             title: Text(item.title ?? '(untitled)'),
-            subtitle: Text('${item.type} • ${item.status}'),
+            subtitle: Text('${item.title} • ${item.status}'),
             trailing: Text('P${item.priority ?? '-'}'),
           );
         },
