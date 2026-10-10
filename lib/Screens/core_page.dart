@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import 'main_tabs_section.dart';
+import 'core_pages/main_tabs_section.dart';
 
 class CorePage extends StatefulWidget {
   const CorePage({super.key});

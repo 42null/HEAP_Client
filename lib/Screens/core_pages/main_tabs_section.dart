@@ -1,7 +1,21 @@
 import 'package:flutter/material.dart';
 
-class MainTabsSection extends StatelessWidget {
+// Screens
+import '../item_list_screen.dart';
+import '../edit_screen.dart';
+
+// Data models
+import '../../models/item.dart';
+
+class MainTabsSection extends StatefulWidget {
   const MainTabsSection({super.key});
+
+  @override
+  State<MainTabsSection> createState() => _MainTabsSectionState();
+}
+
+class _MainTabsSectionState extends State<MainTabsSection> {
+  Item? _selectedItem;
 
   @override
   Widget build(BuildContext context) {
@@ -36,13 +50,27 @@ class MainTabsSection extends StatelessWidget {
           ),
 
           // 3. Pages that fill the rest
-          const Expanded(
+          Expanded(
             child: TabBarView(
               children: [
-                Center(child: Text('For You')),
-                Center(child: Text('Projects')),
-                Center(child: Text('Items')),
-                Center(child: Text('Edit')),
+                const Center(child: Text('For You')),
+                const Center(child: Text('Projects')),
+                Builder(
+                  builder: (BuildContext context) {
+                    return ItemListScreen(
+                      onItemSelected: (item) {
+                        setState(() {
+                          _selectedItem = item;
+                        });
+                        DefaultTabController.of(context).animateTo(3);
+                      },
+                    );
+                  },
+                ),
+                EditScreen(
+                  key: _selectedItem != null ? ValueKey(_selectedItem!.id) : const ValueKey('new_item'),
+                  item: _selectedItem,
+                ),
               ],
             ),
           ),
