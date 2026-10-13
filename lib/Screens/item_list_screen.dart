@@ -38,16 +38,16 @@ class ItemListScreen extends StatelessWidget {
                     width: 12,
                     height: 12,
                     decoration: BoxDecoration(
-                      color: item.color,
+                      color: item.statusColor,
                       shape: BoxShape.circle,
                     ),
                   ),
-                  title: Text(item.titleText),
+                  title: Text(item.title.toString()),
                   subtitle: Row(
                     children: [
                       const Text('Status: '),
                       PillBox(
-                        status: item.status,
+                        status: item.progressStatus,
                         onTap: () {
                           onItemSelected(item);
                         },

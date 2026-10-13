@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import '../models/item.dart';
 
 class PillBox extends StatelessWidget {
-  final Status status;
+  final ProgressStatus status;
   final VoidCallback onTap;
 
   const PillBox({

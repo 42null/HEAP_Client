@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
-enum Status implements Comparable<Status> {
+import 'base_model.dart';
+
+enum ProgressStatus implements Comparable<ProgressStatus> {
   UNSET(order: 0, hexColor: '#D3D3D3'),
   BACKLOG(order: 1, hexColor: '#808080'),
   SELECTED(order: 2, hexColor: '#0000FF'),
@@ -8,7 +10,7 @@ enum Status implements Comparable<Status> {
   COMPLETED(order: 4, hexColor: '#008000'),
   ARCHIVED(order: 99, hexColor: '#A9A9A9');
 
-  const Status({
+  const ProgressStatus({
     required this.order,
     required this.hexColor,
   });
@@ -18,36 +20,48 @@ enum Status implements Comparable<Status> {
   Color get color => Color(int.parse(hexColor.replaceFirst('#', '0xFF')));
 
   @override
-  int compareTo(Status other) => order.compareTo(other.order);
+  int compareTo(ProgressStatus other) => order.compareTo(other.order);
 }
 
+class ItemTitle({required super.value, required super.editorSource}) extends BaseItemModel{
+  @override
+  // TODO: add some logic here to decide on colors
+  Color get givenColor => ProgressStatus.UNSET.color;
+
+}
+
+
+
 class Item {
+  final Item? uncommittedEdit;
   final int id;
-  final String? title;
   final int? priority;
-  final Status status;
+  final ProgressStatus progressStatus;
+  final ItemTitle? title;
 
   const Item({
     required this.id,
+    this.uncommittedEdit,
     this.title,
     this.priority,
-    required this.status,
+    required this.progressStatus,
   });
 
   Item copyWith({
     int? id,
-    String? title,
+    ItemTitle? title,
     int? priority,
-    Status? status,
+    ProgressStatus? progressStatus,
   }) {
     return Item(
+      uncommittedEdit: uncommittedEdit ?? this.uncommittedEdit,
       id: id ?? this.id,
       title: title ?? this.title,
       priority: priority ?? this.priority,
-      status: status ?? this.status,
+      progressStatus: progressStatus ?? this.progressStatus,
     );
   }
 
-  String get titleText => title ?? '(untitled)';
-  Color get color => status.color;
+  ItemTitle get titleText => title ?? new ItemTitle(value: "(Unset)", editorSource: EditorSource(sourceType: SourceType.PLATFORM, name: "Item.dart default"));
+  Color get statusColor => progressStatus.color;
 }

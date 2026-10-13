@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../models/base_model.dart';
 import '../models/item.dart';
 import '../data/item_repository.dart';
 
@@ -14,14 +15,14 @@ class EditScreen extends StatefulWidget {
 class _EditScreenState extends State<EditScreen> {
   late TextEditingController _titleController;
   late TextEditingController _priorityController;
-  Status _selectedStatus = Status.UNSET;
+  ProgressStatus _selectedStatus = ProgressStatus.UNSET;
 
   @override
   void initState() {
     super.initState();
-    _titleController = TextEditingController(text: widget.item?.title);
+    _titleController = TextEditingController(text: widget.item?.title.toString());
     _priorityController = TextEditingController(text: widget.item?.priority?.toString());
-    _selectedStatus = widget.item?.status ?? Status.UNSET;
+    _selectedStatus = widget.item?.progressStatus ?? ProgressStatus.UNSET;
   }
 
   @override
@@ -35,9 +36,9 @@ class _EditScreenState extends State<EditScreen> {
     if (widget.item != null) {
       final updatedItem = Item(
         id: widget.item!.id,
-        title: _titleController.text,
+        title: new ItemTitle(value: _titleController.text, editorSource: EditorSource(sourceType: SourceType.USER, name: "Editor")),
         priority: int.tryParse(_priorityController.text),
-        status: _selectedStatus,
+        progressStatus: _selectedStatus,
       );
       ItemRepository.repository.updateItem(updatedItem);
       ScaffoldMessenger.of(context).showSnackBar(
@@ -49,9 +50,9 @@ class _EditScreenState extends State<EditScreen> {
       // Handle new item creation
       final newItem = Item(
         id: DateTime.now().millisecondsSinceEpoch.remainder(100000), // Simple unique ID
-        title: _titleController.text,
+        title: new ItemTitle(value: _titleController.text, editorSource: EditorSource(sourceType: SourceType.USER, name: "Editor")),
         priority: int.tryParse(_priorityController.text),
-        status: _selectedStatus,
+        progressStatus: _selectedStatus,
       );
       ItemRepository.repository.updateItem(newItem);
       ScaffoldMessenger.of(context).showSnackBar(
@@ -110,14 +111,14 @@ class _EditScreenState extends State<EditScreen> {
                   ),
                   const SizedBox(height: 16),
                   const Text('Status'),
-                  DropdownButtonFormField<Status>(
+                  DropdownButtonFormField<ProgressStatus>(
                     value: _selectedStatus,
                     onChanged: (value) {
                       setState(() {
                         _selectedStatus = value!;
                       });
                     },
-                    items: Status.values.map((status) {
+                    items: ProgressStatus.values.map((status) {
                       return DropdownMenuItem(
                         value: status,
                         child: Text(status.name),

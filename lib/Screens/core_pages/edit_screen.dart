@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import '../../models/base_model.dart';
 import '../../models/item.dart';
-import '../../data/item_repository.dart'; // Assuming this handles data operations
+import '../../data/item_repository.dart';
 
 class EditScreen extends StatefulWidget {
   final Item? item;
@@ -15,7 +16,7 @@ class EditScreen extends StatefulWidget {
 class _EditScreenState extends State<EditScreen> {
   late TextEditingController _titleController;
   late TextEditingController _priorityController;
-  late Status _selectedStatus;
+  late ProgressStatus _selectedStatus;
 
   // Track the current state of the item for local updates
   Item? _currentLocalItem;
@@ -26,16 +27,16 @@ class _EditScreenState extends State<EditScreen> {
   void initState() {
     super.initState();
     // Initialize controllers and local item state from widget.item
-    _titleController = TextEditingController(text: widget.item?.title ?? '');
-    _priorityController = TextEditingController(text: widget.item?.priority.toString() ?? '');
-    _selectedStatus = widget.item?.status ?? Status.UNSET;
+    _titleController = TextEditingController(text: widget.item?.title?.value ?? '');
+    _priorityController = TextEditingController(text: widget.item?.priority?.toString() ?? '');
+    _selectedStatus = widget.item?.progressStatus ?? ProgressStatus.UNSET;
 
     // Create a mutable local copy for editing
     _currentLocalItem = widget.item?.copyWith(
       title: widget.item?.title,
       priority: widget.item?.priority,
-      status: widget.item?.status,
-    ) ?? Item(id: -1, status: Status.UNSET); // -1 indicates a new item
+      progressStatus: widget.item?.progressStatus,
+    ) ?? Item(id: -1, progressStatus: ProgressStatus.UNSET); // -1 indicates a new item
 
     // Add listener to controllers to update the local item state as user types
     _titleController.addListener(_onTitleChanged);
@@ -45,7 +46,7 @@ class _EditScreenState extends State<EditScreen> {
   void _onTitleChanged() {
     final newTitle = _titleController.text;
     setState(() {
-      _currentLocalItem = _currentLocalItem!.copyWith(title: newTitle);
+      _currentLocalItem = _currentLocalItem!.copyWith(title: new ItemTitle(value: newTitle, editorSource: new EditorSource(sourceType: SourceType.PLATFORM, name: 'Defaults')));
     });
   }
 
@@ -144,16 +145,16 @@ class _EditScreenState extends State<EditScreen> {
               // Status Selection
               Text('Status', style: Theme.of(context).textTheme.titleLarge),
               const SizedBox(height: 8),
-              DropdownButtonFormField<Status>(
+              DropdownButtonFormField<ProgressStatus>(
                 initialValue: _selectedStatus,
-                onChanged: (Status? newValue) {
+                onChanged: (ProgressStatus? newValue) {
                   setState(() {
                     _selectedStatus = newValue!;
-                    _currentLocalItem = _currentLocalItem!.copyWith(status: newValue!);
+                    _currentLocalItem = _currentLocalItem!.copyWith(progressStatus: newValue!);
                   });
                 },
-                items: Status.values.map((status) {
-                  return DropdownMenuItem<Status>(
+                items: ProgressStatus.values.map((status) {
+                  return DropdownMenuItem<ProgressStatus>(
                     value: status,
                     child: Text(status.name),
                   );
