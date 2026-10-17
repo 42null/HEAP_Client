@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'dart:async';
 import '../models/base_model.dart';
 import '../models/item.dart';
 import '../data/item_repository.dart';
@@ -87,52 +88,108 @@ class _EditScreenState extends State<EditScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    widget.item != null ? 'Edit Item' : 'New Item',
+                    widget.item != null ? 'Edit Item (screen)' : 'New Item (screen)',
                     style: Theme.of(context).textTheme.headlineMedium,
                   ),
                   const SizedBox(height: 24),
-                  const Text('Title'),
-                  TextField(
-                    controller: _titleController,
-                    decoration: const InputDecoration(
-                      border: OutlineInputBorder(),
-                      hintText: 'Enter title',
-                    ),
+                  Row(
+                    children: [
+                      const Text('Title'),
+                      const SizedBox(width: 8),
+                      BillButton(),
+                    ]
+                  ),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: TextField(
+                          controller: _titleController,
+                          decoration: InputDecoration(
+                            border: OutlineInputBorder(),
+                            hintText: 'Enter title',
+                            suffixIcon: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                GestureDetector(
+                                  // onTap: () => _titleController.clear(),
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                    decoration: BoxDecoration(
+                                      color: Colors.blue[50],
+                                      borderRadius: BorderRadius.circular(20),
+                                    ),
+                                    child: const Icon(Icons.playlist_add_circle, color: Colors.blue, size: 18),
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                IconButton(
+                                  icon: const Icon(Icons.clear),
+                                  onPressed: () => _titleController.clear(),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                   const SizedBox(height: 16),
                   const Text('Priority'),
-                  TextField(
-                    controller: _priorityController,
-                    keyboardType: TextInputType.number,
-                    decoration: const InputDecoration(
-                      border: OutlineInputBorder(),
-                      hintText: 'Enter priority',
-                    ),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: TextField(
+                          controller: _priorityController,
+                          keyboardType: TextInputType.number,
+                          decoration: const InputDecoration(
+                            border: OutlineInputBorder(),
+                            hintText: 'Enter priority',
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      BillButton(),
+                    ],
                   ),
                   const SizedBox(height: 16),
                   const Text('Status'),
-                  DropdownButtonFormField<ProgressStatus>(
-                    value: _selectedStatus,
-                    onChanged: (value) {
-                      setState(() {
-                        _selectedStatus = value!;
-                      });
-                    },
-                    items: ProgressStatus.values.map((status) {
-                      return DropdownMenuItem(
-                        value: status,
-                        child: Text(status.name),
-                      );
-                    }).toList(),
-                    decoration: const InputDecoration(
-                      border: OutlineInputBorder(),
-                      hintText: 'Select status',
-                    ),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: DropdownButtonFormField<ProgressStatus>(
+                          value: _selectedStatus,
+                          onChanged: (value) {
+                            setState(() {
+                              _selectedStatus = value!;
+                            });
+                          },
+                          items: ProgressStatus.values.map((status) {
+                            return DropdownMenuItem(
+                              value: status,
+                              child: Text(status.name),
+                            );
+                          }).toList(),
+                          decoration: const InputDecoration(
+                            border: OutlineInputBorder(),
+                            hintText: 'Select status',
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      BillButton(),
+                    ],
                   ),
                   const Spacer(),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.end,
                     children: [
+                      TextButton(
+                        onPressed: () {
+                          Navigator.pop(context);
+                        },
+                        child: const Text('Cancel'),
+                      ),
+                      const SizedBox(width: 8),
                       ElevatedButton(
                         onPressed: _saveItem,
                         child: const Text('Save'),
@@ -146,6 +203,87 @@ class _EditScreenState extends State<EditScreen> {
           ),
         ],
       ),
+    );
+  }
+}
+
+class BillButton extends StatefulWidget {
+  const BillButton({super.key});
+
+  @override
+  State<BillButton> createState() => _BillButtonState();
+}
+
+class _BillButtonState extends State<BillButton> {
+  bool _isProcessing = false;
+  double _progress = 0.0;
+  bool _isPaused = false;
+  Timer? _timer;
+
+  void _toggleBilling() {
+    if (!_isProcessing) {
+      setState(() {
+        _isProcessing = true;
+        _progress = 0.0;
+        _isPaused = false;
+      });
+      _startTimer();
+    } else {
+      setState(() {
+        _isPaused = !_isPaused;
+      });
+    }
+  }
+
+  void _startTimer() {
+    _timer?.cancel();
+    _timer = Timer.periodic(const Duration(milliseconds: 50), (timer) {
+      if (!_isPaused) {
+        setState(() {
+          _progress += 0.01;
+          if (_progress >= 1.0) {
+            _progress = 1.0;
+            _timer?.cancel();
+            setState(() {
+              _isProcessing = false;
+            });
+          }
+        });
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return OutlinedButton(
+      onPressed: _toggleBilling,
+      style: OutlinedButton.styleFrom(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        minimumSize: const Size(100, 40),
+      ),
+      child: _isProcessing
+          ? Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text('Billing...', style: TextStyle(fontSize: 10)),
+                const SizedBox(height: 4),
+                SizedBox(
+                  width: 80,
+                  child: LinearProgressIndicator(
+                    value: _progress,
+                    backgroundColor: Colors.grey[300],
+                    color: Colors.blue,
+                  ),
+                ),
+              ],
+            )
+          : const Text('Bill'),
     );
   }
 }

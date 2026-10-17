@@ -33,13 +33,13 @@ class ItemTitle({required super.value, required super.editorSource}) extends Bas
 
 
 class Item {
-  final Item? uncommittedEdit;
-  final int id;
-  final int? priority;
-  final ProgressStatus progressStatus;
-  final ItemTitle? title;
+  Item? uncommittedEdit;
+  int id;
+  int? priority;
+  ProgressStatus progressStatus;
+  ItemTitle? title;
 
-  const Item({
+  Item({
     required this.id,
     this.uncommittedEdit,
     this.title,
@@ -47,19 +47,31 @@ class Item {
     required this.progressStatus,
   });
 
-  Item copyWith({
+  void setUncommited({
     int? id,
-    ItemTitle? title,
+    String? titleText,
     int? priority,
     ProgressStatus? progressStatus,
   }) {
-    return Item(
-      uncommittedEdit: uncommittedEdit ?? this.uncommittedEdit,
-      id: id ?? this.id,
-      title: title ?? this.title,
-      priority: priority ?? this.priority,
-      progressStatus: progressStatus ?? this.progressStatus,
-    );
+    // return Item(
+      // uncommittedEdit: uncommittedEdit ?? this.uncommittedEdit,
+      this.id = id ?? this.id;
+      this.title = title ?? this.title;
+      this.priority = priority ?? this.priority;
+      this.progressStatus = progressStatus ?? this.progressStatus;
+    // );
+  }
+
+  void saveCommited({
+    bool? id,
+    bool? title,
+    bool? priority,
+    bool? progressStatus,
+  }) {
+    if(id != null && id){ this.id = this.uncommittedEdit!.id; }
+    if(title != null && title){ this.title = this.uncommittedEdit?.title; }
+    if(priority != null && priority){ this.priority = this.uncommittedEdit?.priority; }
+    if(progressStatus != null && progressStatus){ this.progressStatus = this.uncommittedEdit!.progressStatus; }
   }
 
   ItemTitle get titleText => title ?? new ItemTitle(value: "(Unset)", editorSource: EditorSource(sourceType: SourceType.PLATFORM, name: "Item.dart default"));

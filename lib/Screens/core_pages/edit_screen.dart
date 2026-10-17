@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import '../../models/base_model.dart';
+import 'dart:async';
 import '../../models/item.dart';
 import '../../data/item_repository.dart';
 
@@ -32,11 +32,11 @@ class _EditScreenState extends State<EditScreen> {
     _selectedStatus = widget.item?.progressStatus ?? ProgressStatus.UNSET;
 
     // Create a mutable local copy for editing
-    _currentLocalItem = widget.item?.copyWith(
-      title: widget.item?.title,
-      priority: widget.item?.priority,
-      progressStatus: widget.item?.progressStatus,
-    ) ?? Item(id: -1, progressStatus: ProgressStatus.UNSET); // -1 indicates a new item
+    // _currentLocalItem = widget.item?.setUncommited(
+    //   title: widget.item?.title,
+    //   priority: widget.item?.priority,
+    //   progressStatus: widget.item?.progressStatus,
+    // ) ?? Item(id: -1, progressStatus: ProgressStatus.UNSET); // -1 indicates a new item
 
     // Add listener to controllers to update the local item state as user types
     _titleController.addListener(_onTitleChanged);
@@ -46,14 +46,17 @@ class _EditScreenState extends State<EditScreen> {
   void _onTitleChanged() {
     final newTitle = _titleController.text;
     setState(() {
-      _currentLocalItem = _currentLocalItem!.copyWith(title: new ItemTitle(value: newTitle, editorSource: new EditorSource(sourceType: SourceType.PLATFORM, name: 'Defaults')));
+      _currentLocalItem?.setUncommited(
+        titleText: newTitle,
+
+      );
     });
   }
 
   void _onPriorityChanged() {
     final newPriority = int.tryParse(_priorityController.text);
     setState(() {
-      _currentLocalItem = _currentLocalItem!.copyWith(priority: newPriority);
+      _currentLocalItem?.setUncommited(priority: newPriority);
     });
   }
 
@@ -119,7 +122,13 @@ class _EditScreenState extends State<EditScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               // Title Input
-              Text('Title', style: Theme.of(context).textTheme.titleLarge),
+              Row(
+                children: [
+                  Text('Title2', style: Theme.of(context).textTheme.titleLarge),
+                  BillButton(),
+                  const SizedBox(width: 8),
+                ],
+              ),
               const SizedBox(height: 8),
               TextField(
                 controller: _titleController,
@@ -131,7 +140,13 @@ class _EditScreenState extends State<EditScreen> {
               ),
               const SizedBox(height: 20),
               // Priority Input
-              Text('Priority', style: Theme.of(context).textTheme.titleLarge),
+              Row(
+                children: [
+                  BillButton(),
+                  Text('Priority', style: Theme.of(context).textTheme.titleLarge),
+                  const SizedBox(width: 8),
+                ],
+              ),
               const SizedBox(height: 8),
               TextField(
                 controller: _priorityController,
@@ -143,14 +158,20 @@ class _EditScreenState extends State<EditScreen> {
               ),
               const SizedBox(height: 20),
               // Status Selection
-              Text('Status', style: Theme.of(context).textTheme.titleLarge),
+              Row(
+                children: [
+                  Text('Status', style: Theme.of(context).textTheme.titleLarge),
+                  const SizedBox(width: 8),
+                  BillButton(),
+                ],
+              ),
               const SizedBox(height: 8),
               DropdownButtonFormField<ProgressStatus>(
                 initialValue: _selectedStatus,
                 onChanged: (ProgressStatus? newValue) {
                   setState(() {
                     _selectedStatus = newValue!;
-                    _currentLocalItem = _currentLocalItem!.copyWith(progressStatus: newValue!);
+                    _currentLocalItem?.setUncommited(progressStatus: newValue);
                   });
                 },
                 items: ProgressStatus.values.map((status) {
@@ -173,6 +194,87 @@ class _EditScreenState extends State<EditScreen> {
           ),
         ),
       ),
+    );
+  }
+}
+
+class BillButton extends StatefulWidget {
+  const BillButton({super.key});
+
+  @override
+  State<BillButton> createState() => _BillButtonState();
+}
+
+class _BillButtonState extends State<BillButton> {
+  bool _isProcessing = false;
+  double _progress = 0.0;
+  bool _isPaused = false;
+  Timer? _timer;
+
+  void _toggleBilling() {
+    if (!_isProcessing) {
+      setState(() {
+        _isProcessing = true;
+        _progress = 0.0;
+        _isPaused = false;
+      });
+      _startTimer();
+    } else {
+      setState(() {
+        _isPaused = !_isPaused;
+      });
+    }
+  }
+
+  void _startTimer() {
+    _timer?.cancel();
+    _timer = Timer.periodic(const Duration(milliseconds: 50), (timer) {
+      if (!_isPaused) {
+        setState(() {
+          _progress += 0.01;
+          if (_progress >= 1.0) {
+            _progress = 1.0;
+            _timer?.cancel();
+            setState(() {
+              _isProcessing = false;
+            });
+          }
+        });
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return OutlinedButton(
+      onPressed: _toggleBilling,
+      style: OutlinedButton.styleFrom(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        minimumSize: const Size(100, 40),
+      ),
+      child: _isProcessing
+          ? Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text('Billing...', style: TextStyle(fontSize: 10)),
+                const SizedBox(height: 4),
+                SizedBox(
+                  width: 80,
+                  child: LinearProgressIndicator(
+                    value: _progress,
+                    backgroundColor: Colors.grey[300],
+                    color: Colors.blue,
+                  ),
+                ),
+              ],
+            )
+          : const Text('Bill'),
     );
   }
 }

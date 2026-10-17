@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'core_pages/main_tabs_section.dart';
+import 'icon_table_page.dart';
 
 class CorePage extends StatefulWidget {
   const CorePage({super.key});
@@ -14,10 +15,10 @@ class _CorePageState extends State<CorePage> {
   bool _isExtended = false;
 
   // One entry per rail destination, same order as `destinations` below
-  final List<Widget> _sections = const [
+    final List<Widget> _sections = [
     MainTabsSection(),
-    Center(child: Text('Second section')),
-    Center(child: Text('Third section')),
+    const Center(child: Text('Second section')),
+    const IconTablePage(),
   ];
 
   @override
