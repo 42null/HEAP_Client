@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'core_pages/main_tabs_section.dart';
 import 'icon_table_page.dart';
+import 'queue_tracker_screen.dart';
 
 class CorePage extends StatefulWidget {
   const CorePage({super.key});
@@ -17,7 +18,7 @@ class _CorePageState extends State<CorePage> {
   // One entry per rail destination, same order as `destinations` below
     final List<Widget> _sections = [
     MainTabsSection(),
-    const Center(child: Text('Second section')),
+    const QueueTrackerScreen(),
     const IconTablePage(),
   ];
 
@@ -44,19 +45,19 @@ class _CorePageState extends State<CorePage> {
             ),
             destinations: const <NavigationRailDestination>[
               NavigationRailDestination(
-                icon: Icon(Icons.favorite_border),
-                selectedIcon: Icon(Icons.favorite),
-                label: Text('First'),
+                icon: Icon(Icons.folder_outlined),
+                selectedIcon: Icon(Icons.folder),
+                label: Text('Projects'),
               ),
               NavigationRailDestination(
-                icon: Icon(Icons.bookmark_border),
-                selectedIcon: Icon(Icons.bookmark),
-                label: Text('Second'),
+                icon: Icon(Icons.playlist_add_circle_outlined),
+                selectedIcon: Icon(Icons.playlist_add_circle),
+                label: Text('Queue'),
               ),
               NavigationRailDestination(
-                icon: Icon(Icons.star_border),
-                selectedIcon: Icon(Icons.star),
-                label: Text('Third'),
+                icon: Icon(Icons.palette_outlined),
+                selectedIcon: Icon(Icons.palette),
+                label: Text('Icons'),
               ),
             ],
           ),

@@ -1,0 +1,8 @@
+# Import your existing Gemma 12B GGUF file
+FROM /home/mainuser/.android/models/gemma-4-12b/gemma-4-12b-it-qat-q4_0.gguf
+
+# Set context window size to 32k tokens
+PARAMETER num_ctx 32768
+
+# Utilize maximum GPU layers available
+PARAMETER num_gpu 99

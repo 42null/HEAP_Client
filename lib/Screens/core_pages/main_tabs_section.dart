@@ -42,10 +42,10 @@ class _MainTabsSectionState extends State<MainTabsSection> {
           // 2. Tabs
           const TabBar(
             tabs: [
-              Tab(text: 'For You'),
-              Tab(text: 'Projects'),
-              Tab(text: 'Items'),
-              Tab(text: 'Edit'),
+              Tab(icon: Icon(Icons.trending_up), text: 'For You'),
+              Tab(icon: Icon(Icons.dashboard), text: 'Projects'),
+              Tab(icon: Icon(Icons.list), text: 'Items'),
+              Tab(icon: Icon(Icons.edit), text: 'Edit'),
             ],
           ),
 

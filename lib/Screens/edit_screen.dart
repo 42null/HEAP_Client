@@ -95,8 +95,8 @@ class _EditScreenState extends State<EditScreen> {
                   Row(
                     children: [
                       const Text('Title'),
-                      const SizedBox(width: 8),
-                      BillButton(),
+                      const SizedBox(width: 6),
+                      QueueButton(),
                     ]
                   ),
                   Row(
@@ -148,7 +148,7 @@ class _EditScreenState extends State<EditScreen> {
                         ),
                       ),
                       const SizedBox(width: 8),
-                      BillButton(),
+                      QueueButton(),
                     ],
                   ),
                   const SizedBox(height: 16),
@@ -176,7 +176,7 @@ class _EditScreenState extends State<EditScreen> {
                         ),
                       ),
                       const SizedBox(width: 8),
-                      BillButton(),
+                      QueueButton(),
                     ],
                   ),
                   const Spacer(),
@@ -207,25 +207,26 @@ class _EditScreenState extends State<EditScreen> {
   }
 }
 
-class BillButton extends StatefulWidget {
-  const BillButton({super.key});
+class QueueButton extends StatefulWidget {
+  const QueueButton({super.key});
 
   @override
-  State<BillButton> createState() => _BillButtonState();
+  State<QueueButton> createState() => _QueueButtonState();
 }
 
-class _BillButtonState extends State<BillButton> {
+class _QueueButtonState extends State<QueueButton> {
   bool _isProcessing = false;
   double _progress = 0.0;
   bool _isPaused = false;
   Timer? _timer;
 
-  void _toggleBilling() {
+  void _toggleQueueing() {
     if (!_isProcessing) {
       setState(() {
         _isProcessing = true;
         _progress = 0.0;
         _isPaused = false;
+
       });
       _startTimer();
     } else {
@@ -262,16 +263,19 @@ class _BillButtonState extends State<BillButton> {
   @override
   Widget build(BuildContext context) {
     return OutlinedButton(
-      onPressed: _toggleBilling,
+      onPressed: _toggleQueueing,
       style: OutlinedButton.styleFrom(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        minimumSize: const Size(100, 40),
+        minimumSize: const Size(100, 20),
       ),
       child: _isProcessing
           ? Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Text('Billing...', style: TextStyle(fontSize: 10)),
+                Text(
+                  _isPaused ? 'Paused' : 'Queued #${2}',
+                  style: const TextStyle(fontSize: 10),
+                ),
                 const SizedBox(height: 4),
                 SizedBox(
                   width: 80,
@@ -283,7 +287,7 @@ class _BillButtonState extends State<BillButton> {
                 ),
               ],
             )
-          : const Text('Bill'),
+          : const Text('Queue'),
     );
   }
 }
