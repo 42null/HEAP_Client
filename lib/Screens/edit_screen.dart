@@ -10,6 +10,8 @@ class EditScreen extends StatefulWidget {
 
   const EditScreen({super.key, this.item});
 
+  static double get labelWidth => 50.0;
+
   @override
   State<EditScreen> createState() => _EditScreenState();
 }
@@ -39,39 +41,47 @@ class _EditScreenState extends State<EditScreen> {
     if (widget.item != null) {
       final updatedItem = Item(
         id: widget.item!.id,
-        title: new ItemTitle(value: _titleController.text, editorSource: EditorSource(sourceType: SourceType.USER, name: "Editor")),
+        title: ItemTitle(value: _titleController.text, editorSource: EditorSource(sourceType: SourceType.USER, name: "Editor")),
         priority: int.tryParse(_priorityController.text),
         progressStatus: _selectedStatus,
       );
       ItemRepository.repository.updateItem(updatedItem);
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Saved successfully!')),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Saved successfully!')),
+        );
+      }
     } else {
       // Handle new item creation
       final newItem = Item(
         id: DateTime.now().millisecondsSinceEpoch.remainder(100000), // Simple unique ID
-        title: new ItemTitle(value: _titleController.text, editorSource: EditorSource(sourceType: SourceType.USER, name: "Editor")),
+        title: ItemTitle(value: _titleController.text, editorSource: EditorSource(sourceType: SourceType.USER, name: "Editor")),
         priority: int.tryParse(_priorityController.text),
         progressStatus: _selectedStatus,
       );
       ItemRepository.repository.updateItem(newItem);
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('New item created!')),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('New item created!')),
+        );
+      }
     }
   }
 
-  void _handleQueueAction() async {
+  void _handleQueueAction(String payload) async {
     if (widget.item != null) {
-      await _queueRepository.enqueue("", widget.item!.id);
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Added to queue')),
-      );
+      await _queueRepository.enqueue(payload, widget.item!.id);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Added to queue')),
+        );
+      }
     } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please save the item before adding it to the queue')),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Please save the item before adding it to the queue')),
+        );
+      }
     }
   }
 
@@ -107,9 +117,9 @@ class _EditScreenState extends State<EditScreen> {
                   const SizedBox(height: 24),
                   Row(
                     children: [
-                      const Text('Title'),
+                      SizedBox(width: EditScreen.labelWidth, child: const Text('Title')),
                       const SizedBox(width: 6),
-                      QueueButton(onPressed: _handleQueueAction),
+                      QueueButton(onPressed: () => _handleQueueAction(_titleController.text)),
                     ]
                   ),
                   Row(
@@ -124,7 +134,6 @@ class _EditScreenState extends State<EditScreen> {
                               mainAxisSize: MainAxisSize.min,
                               children: [
                                 GestureDetector(
-                                  // onTap: () => _titleController.clear(),
                                   child: Container(
                                     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                                     decoration: BoxDecoration(
@@ -147,25 +156,55 @@ class _EditScreenState extends State<EditScreen> {
                     ],
                   ),
                   const SizedBox(height: 16),
-                  const Text('Priority'),
+                  Row(
+                    children: [
+                      SizedBox(width: EditScreen.labelWidth, child: const Text('Priority')),
+                      const SizedBox(width: 6),
+                      QueueButton(onPressed: () => _handleQueueAction(_priorityController.text)),
+                    ]
+                  ),
                   Row(
                     children: [
                       Expanded(
                         child: TextField(
                           controller: _priorityController,
                           keyboardType: TextInputType.number,
-                          decoration: const InputDecoration(
+                          decoration: InputDecoration(
                             border: OutlineInputBorder(),
                             hintText: 'Enter priority',
+                            suffixIcon: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                GestureDetector(
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                    decoration: BoxDecoration(
+                                      color: Colors.blue[50],
+                                      borderRadius: BorderRadius.circular(20),
+                                    ),
+                                    child: const Icon(Icons.playlist_add_circle, color: Colors.blue, size: 18),
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                IconButton(
+                                  icon: const Icon(Icons.clear),
+                                  onPressed: () => _priorityController.clear(),
+                                ),
+                              ],
+                            ),
                           ),
                         ),
                       ),
-                      const SizedBox(width: 8),
-                      QueueButton(onPressed: _handleQueueAction),
                     ],
                   ),
                   const SizedBox(height: 16),
-                  const Text('Status'),
+                  Row(
+                    children: [
+                      SizedBox(width: EditScreen.labelWidth, child: const Text('Status')),
+                      const SizedBox(width: 6),
+                      QueueButton(onPressed: () => _handleQueueAction(_selectedStatus.name)),
+                    ]
+                  ),
                   Row(
                     children: [
                       Expanded(
@@ -182,14 +221,32 @@ class _EditScreenState extends State<EditScreen> {
                               child: Text(status.name),
                             );
                           }).toList(),
-                          decoration: const InputDecoration(
+                          decoration: InputDecoration(
                             border: OutlineInputBorder(),
                             hintText: 'Select status',
+                            suffixIcon: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                GestureDetector(
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                    decoration: BoxDecoration(
+                                      color: Colors.blue[50],
+                                      borderRadius: BorderRadius.circular(20),
+                                    ),
+                                    child: const Icon(Icons.playlist_add_circle, color: Colors.blue, size: 18),
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                IconButton(
+                                  icon: const Icon(Icons.clear),
+                                  onPressed: () => _selectedStatus = ProgressStatus.UNSET,
+                                ),
+                              ],
+                            ),
                           ),
                         ),
                       ),
-                      const SizedBox(width: 8),
-                      QueueButton(onPressed: _handleQueueAction),
                     ],
                   ),
                   const Spacer(),
@@ -216,6 +273,23 @@ class _EditScreenState extends State<EditScreen> {
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildInputRow({required String label, required Widget child}) {
+    return Row(
+      children: [
+        Expanded(child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(label),
+            const SizedBox(height: 4),
+            child,
+          ],
+        )),
+        const SizedBox(width: 8),
+        QueueButton(onPressed: () => _handleQueueAction("")),
+      ],
     );
   }
 }
@@ -286,7 +360,7 @@ class _QueueButtonState extends State<QueueButton> {
       onPressed: _toggleQueueing,
       style: OutlinedButton.styleFrom(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        minimumSize: const Size(100, 20),
+        minimumSize: Size(EditScreen.labelWidth, 20),
       ),
       child: _isProcessing
           ? Column(

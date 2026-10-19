@@ -1,18 +1,34 @@
 import 'dart:async';
 import 'dart:math';
 import 'package:sqflite/sqflite.dart';
+import '../models/job.dart';
 import 'database.dart';
 import '../models/queue_item.dart';
 
 class QueueRepository {
   final DatabaseHelper _dbHelper = DatabaseHelper.Instance;
 
-  Future<void> enqueue(String payload, int itemId, {int priority = 0}) async {
+  Future<void> enqueue(String payload, int itemId, {int priority = 0, JobType jobType = JobType.FILL_IN_REQUEST}) async {
     final db = await _dbHelper.database;
+    final jobId = Guid.newString();
+    
+    // Save the job details separately
+    final newJob = Job(
+      jobId: jobId,
+      itemId: itemId,
+      jobType: jobType,
+      payload: payload,
+      priority: priority,
+    );
+
+    await db.insert('jobs', newJob.toMap());
+
+    // Save the queue item for processing
     final newItem = QueueItem(
       queueId: Guid.newString(),
       itemId: itemId,
-      payload: payload,
+      jobId: jobId,
+      payload: payload, // Still keeping it here so the UI tracker works easily
       priority: priority,
       createdAt: DateTime.now().millisecondsSinceEpoch,
     );

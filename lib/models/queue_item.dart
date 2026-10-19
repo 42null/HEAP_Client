@@ -1,4 +1,5 @@
 import 'package:sqflite/sqflite.dart';
+import '../models/job.dart';
 
 enum QueueStatus {
   PENDING,
@@ -11,7 +12,9 @@ enum QueueStatus {
 class QueueItem {
   final String queueId;
   final int itemId;
+  final String jobId;
   final String payload;
+  final JobType jobType;
   final QueueStatus status;
   final int priority;
   final int createdAt;
@@ -21,7 +24,9 @@ class QueueItem {
   QueueItem({
     required this.queueId,
     required this.itemId,
+    required this.jobId,
     required this.payload,
+    this.jobType = JobType.FILL_IN_REQUEST,
     this.status = QueueStatus.PENDING,
     this.priority = 0,
     required this.createdAt,
@@ -33,7 +38,9 @@ class QueueItem {
     return {
       'queueId': queueId,
       'itemId': itemId,
+      'jobId': jobId,
       'payload': payload,
+      'jobType': jobType.index,
       'status': status.index,
       'priority': priority,
       'createdAt': createdAt,
@@ -46,7 +53,9 @@ class QueueItem {
     return QueueItem(
       queueId: map['queueId'] as String? ?? '',
       itemId: (map['itemId'] as num?)?.toInt() ?? 0,
+      jobId: map['jobId'] as String? ?? '',
       payload: map['payload'] as String? ?? '',
+      jobType: JobType.values[map['jobType'] as int? ?? 0],
       status: QueueStatus.values[map['status'] as int? ?? 0],
       priority: (map['priority'] as num?)?.toInt() ?? 0,
       createdAt: (map['createdAt'] as num?)?.toInt() ?? 0,
