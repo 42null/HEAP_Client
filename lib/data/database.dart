@@ -18,11 +18,12 @@ class DatabaseHelper {
     final dbPath = join(await getDatabasesPath(), 'heap_queue.db');
     return await openDatabase(
       dbPath,
-      version: 1,
+      version: 3,
       onCreate: (db, version) async {
         await db.execute('''
           CREATE TABLE queue_items (
-            id TEXT PRIMARY KEY,
+            queueId TEXT PRIMARY KEY,
+            itemId INTEGER,
             payload TEXT,
             status INTEGER,
             priority INTEGER,
@@ -31,6 +32,22 @@ class DatabaseHelper {
             errorMessage TEXT
           )
         ''');
+      },
+      onUpgrade: (db, oldVersion, newVersion) async {
+        if (oldVersion < 3) {
+          await db.execute('''
+            CREATE TABLE IF NOT EXISTS queue_items (
+              queueId TEXT PRIMARY KEY,
+              itemId INTEGER,
+              payload TEXT,
+              status INTEGER,
+              priority INTEGER,
+              createdAt INTEGER,
+              retryCount INTEGER,
+              errorMessage TEXT
+            )
+          ''');
+        }
       },
     );
   }

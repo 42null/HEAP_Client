@@ -9,7 +9,8 @@ enum QueueStatus {
 }
 
 class QueueItem {
-  final String id;
+  final String queueId;
+  final int itemId;
   final String payload;
   final QueueStatus status;
   final int priority;
@@ -18,7 +19,8 @@ class QueueItem {
   final String? errorMessage;
 
   QueueItem({
-    required this.id,
+    required this.queueId,
+    required this.itemId,
     required this.payload,
     this.status = QueueStatus.PENDING,
     this.priority = 0,
@@ -29,7 +31,8 @@ class QueueItem {
 
   Map<String, dynamic> toMap() {
     return {
-      'id': id,
+      'queueId': queueId,
+      'itemId': itemId,
       'payload': payload,
       'status': status.index,
       'priority': priority,
@@ -41,13 +44,14 @@ class QueueItem {
 
   factory QueueItem.fromMap(Map<String, dynamic> map) {
     return QueueItem(
-      id: map['id'],
-      payload: map['payload'],
-      status: QueueStatus.values[map['status']],
-      priority: map['priority'],
-      createdAt: map['createdAt'],
-      retryCount: map['retryCount'],
-      errorMessage: map['errorMessage'],
+      queueId: map['queueId'] as String? ?? '',
+      itemId: (map['itemId'] as num?)?.toInt() ?? 0,
+      payload: map['payload'] as String? ?? '',
+      status: QueueStatus.values[map['status'] as int? ?? 0],
+      priority: (map['priority'] as num?)?.toInt() ?? 0,
+      createdAt: (map['createdAt'] as num?)?.toInt() ?? 0,
+      retryCount: (map['retryCount'] as num?)?.toInt() ?? 0,
+      errorMessage: map['errorMessage'] as String?,
     );
   }
 }

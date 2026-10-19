@@ -3,6 +3,7 @@ import 'dart:async';
 import '../models/base_model.dart';
 import '../models/item.dart';
 import '../data/item_repository.dart';
+import '../data/queue_repository.dart';
 
 class EditScreen extends StatefulWidget {
   final Item? item;
@@ -17,6 +18,7 @@ class _EditScreenState extends State<EditScreen> {
   late TextEditingController _titleController;
   late TextEditingController _priorityController;
   ProgressStatus _selectedStatus = ProgressStatus.UNSET;
+  final QueueRepository _queueRepository = QueueRepository();
 
   @override
   void initState() {
@@ -45,8 +47,6 @@ class _EditScreenState extends State<EditScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Saved successfully!')),
       );
-      // Optionally navigate back
-      // Navigator.pop(context);
     } else {
       // Handle new item creation
       final newItem = Item(
@@ -58,6 +58,19 @@ class _EditScreenState extends State<EditScreen> {
       ItemRepository.repository.updateItem(newItem);
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('New item created!')),
+      );
+    }
+  }
+
+  void _handleQueueAction() async {
+    if (widget.item != null) {
+      await _queueRepository.enqueue("", widget.item!.id);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Added to queue')),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please save the item before adding it to the queue')),
       );
     }
   }
@@ -96,7 +109,7 @@ class _EditScreenState extends State<EditScreen> {
                     children: [
                       const Text('Title'),
                       const SizedBox(width: 6),
-                      QueueButton(),
+                      QueueButton(onPressed: _handleQueueAction),
                     ]
                   ),
                   Row(
@@ -148,7 +161,7 @@ class _EditScreenState extends State<EditScreen> {
                         ),
                       ),
                       const SizedBox(width: 8),
-                      QueueButton(),
+                      QueueButton(onPressed: _handleQueueAction),
                     ],
                   ),
                   const SizedBox(height: 16),
@@ -176,7 +189,7 @@ class _EditScreenState extends State<EditScreen> {
                         ),
                       ),
                       const SizedBox(width: 8),
-                      QueueButton(),
+                      QueueButton(onPressed: _handleQueueAction),
                     ],
                   ),
                   const Spacer(),
@@ -208,7 +221,9 @@ class _EditScreenState extends State<EditScreen> {
 }
 
 class QueueButton extends StatefulWidget {
-  const QueueButton({super.key});
+  final VoidCallback? onPressed;
+
+  const QueueButton({super.key, this.onPressed});
 
   @override
   State<QueueButton> createState() => _QueueButtonState();
@@ -221,6 +236,11 @@ class _QueueButtonState extends State<QueueButton> {
   Timer? _timer;
 
   void _toggleQueueing() {
+    if (widget.onPressed != null) {
+      widget.onPressed!();
+      return;
+    }
+
     if (!_isProcessing) {
       setState(() {
         _isProcessing = true;

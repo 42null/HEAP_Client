@@ -7,10 +7,11 @@ import '../models/queue_item.dart';
 class QueueRepository {
   final DatabaseHelper _dbHelper = DatabaseHelper.Instance;
 
-  Future<void> enqueue(String payload, {int priority = 0}) async {
+  Future<void> enqueue(String payload, int itemId, {int priority = 0}) async {
     final db = await _dbHelper.database;
     final newItem = QueueItem(
-      id: Guid.newString(),
+      queueId: Guid.newString(),
+      itemId: itemId,
       payload: payload,
       priority: priority,
       createdAt: DateTime.now().millisecondsSinceEpoch,
@@ -21,7 +22,7 @@ class QueueRepository {
 
   Future<void> removeItem(String id) async {
     final db = await _dbHelper.database;
-    await db.delete('queue_items', where: 'id = ?', whereArgs: [id]);
+    await db.delete('queue_items', where: 'queueId = ?', whereArgs: [id]);
   }
 
   Stream<List<QueueItem>> getQueueStream() async* {
