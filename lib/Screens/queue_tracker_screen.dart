@@ -81,8 +81,33 @@ class _QueueTrackerScreenState extends State<QueueTrackerScreen> {
                           leading: CircleAvatar(
                             child: Text('${index + 1}'),
                           ),
-                          title: Text(item.payload.toString()),
-                          subtitle: Text('Status: ${item.status.toString()} (${item.queueId})'),
+                          title: Text(
+                            item.payload.isNotEmpty ? item.payload : 'No Payload',
+                            style: const TextStyle(fontWeight: FontWeight.bold),
+                          ),
+                          subtitle: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text('Status: ${item.status.name}'),
+                              Row(
+                                children: [
+                                  const Text('Priority: '),
+                                  Text('${item.priority}'),
+                                  const SizedBox(width: 8),
+                                  const Text('Retries: '),
+                                  Text('${item.retryCount}'),
+                                ],
+                              ),
+                              if (item.errorMessage != null)
+                                Padding(
+                                  padding: const EdgeInsets.only(top: 4.0),
+                                  child: Text(
+                                    'Error: ${item.errorMessage}',
+                                    style: const TextStyle(color: Colors.red, fontSize: 12),
+                                  ),
+                                ),
+                            ],
+                          ),
                           trailing: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
