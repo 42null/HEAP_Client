@@ -22,33 +22,42 @@ class _EditScreenState extends State<EditScreen> {
   ProgressStatus _selectedStatus = ProgressStatus.UNSET;
   final QueueRepository _queueRepository = QueueRepository();
 
+  // Map of field identifiers to their respective FocusNodes
+  final Map<String, FocusNode> _focusNodes = {
+    'title': FocusNode(),
+    'priority': FocusNode(),
+  };
+
   @override
   void initState() {
     super.initState();
     _titleController = TextEditingController(text: widget.item?.title.toString());
     _priorityController = TextEditingController(text: widget.item?.priority?.toString());
     _selectedStatus = widget.item?.progressStatus ?? ProgressStatus.UNSET;
+
+    // We no longer use listeners here as we'll handle updates via onSubmitted and focus change
   }
 
   @override
   void dispose() {
     _titleController.dispose();
     _priorityController.dispose();
+    _focusNodes.forEach((_, node) => node.dispose());
     super.dispose();
   }
 
   void _saveItem() {
     if (widget.item != null) {
-      final updatedItem = Item(
-        id: widget.item!.id,
-        title: ItemTitle(value: _titleController.text, editorSource: EditorSource(sourceType: SourceType.USER, name: "Editor")),
-        priority: int.tryParse(_priorityController.text),
-        progressStatus: _selectedStatus,
-      );
-      ItemRepository.repository.updateItem(updatedItem);
+      // ItemRepository.repository.saveItem(updatedItem); //@@@
+
+
+
+
+
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Saved successfully!')),
+          SnackBar(content: Text('Saved successfully! - ${_titleController.text}')),
         );
       }
     } else {
@@ -82,6 +91,28 @@ class _EditScreenState extends State<EditScreen> {
           const SnackBar(content: Text('Please save the item before adding it to the queue')),
         );
       }
+    }
+  }
+
+  void _handleFieldUpdate(String fieldIdentifier, String newValue) {
+    if (widget.item != null) {
+      ItemRepository.repository.updateFieldLive(widget.item!.id, fieldIdentifier, newValue);
+    }
+  }
+
+  // Unified logic to handle both commit and temp storage
+  void _onSubmitSave(String fieldIdentifier, String value, {bool pending=false}) {
+    if (!pending) {
+      // Logic for pressing Enter / explicit save
+      _handleFieldUpdate(fieldIdentifier, value);
+    } else {
+      // Logic for losing focus / "auto-save" to temp storage
+      print('Saving $fieldIdentifier to temporary storage: $value');
+      FocusManager.instance.primaryFocus?.unfocus();
+    // Unfocus the box
+
+
+    // TODO: bring in
     }
   }
 
@@ -127,6 +158,9 @@ class _EditScreenState extends State<EditScreen> {
                       Expanded(
                         child: TextField(
                           controller: _titleController,
+                          focusNode: _focusNodes['title'],
+                          onSubmitted: (value) => _onSubmitSave('title', value),
+                          onTapOutside: (event) => _onSubmitSave('title', _titleController.text, pending: true),
                           decoration: InputDecoration(
                             border: OutlineInputBorder(),
                             hintText: 'Enter title',
@@ -168,7 +202,10 @@ class _EditScreenState extends State<EditScreen> {
                       Expanded(
                         child: TextField(
                           controller: _priorityController,
+                          focusNode: _focusNodes['priority'],
                           keyboardType: TextInputType.number,
+                          onSubmitted: (value) => _onSubmitSave('priority', value),
+                          onTapOutside: (event) => _onSubmitSave('priority', _titleController.text, pending: true),
                           decoration: InputDecoration(
                             border: OutlineInputBorder(),
                             hintText: 'Enter priority',
@@ -276,22 +313,6 @@ class _EditScreenState extends State<EditScreen> {
     );
   }
 
-  Widget _buildInputRow({required String label, required Widget child}) {
-    return Row(
-      children: [
-        Expanded(child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(label),
-            const SizedBox(height: 4),
-            child,
-          ],
-        )),
-        const SizedBox(width: 8),
-        QueueButton(onPressed: () => _handleQueueAction("")),
-      ],
-    );
-  }
 }
 
 class QueueButton extends StatefulWidget {
@@ -302,6 +323,7 @@ class QueueButton extends StatefulWidget {
   @override
   State<QueueButton> createState() => _QueueButtonState();
 }
+
 
 class _QueueButtonState extends State<QueueButton> {
   bool _isProcessing = false;
@@ -364,23 +386,23 @@ class _QueueButtonState extends State<QueueButton> {
       ),
       child: _isProcessing
           ? Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  _isPaused ? 'Paused' : 'Queued #${2}',
-                  style: const TextStyle(fontSize: 10),
-                ),
-                const SizedBox(height: 4),
-                SizedBox(
-                  width: 80,
-                  child: LinearProgressIndicator(
-                    value: _progress,
-                    backgroundColor: Colors.grey[300],
-                    color: Colors.blue,
-                  ),
-                ),
-              ],
-            )
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            _isPaused ? 'Paused' : 'Queued #${2}',
+            style: const TextStyle(fontSize: 10),
+          ),
+          const SizedBox(height: 4),
+          SizedBox(
+            width: 80,
+            child: LinearProgressIndicator(
+              value: _progress,
+              backgroundColor: Colors.grey[300],
+              color: Colors.blue,
+            ),
+          ),
+        ],
+      )
           : const Text('Queue'),
     );
   }

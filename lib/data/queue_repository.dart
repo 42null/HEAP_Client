@@ -63,6 +63,32 @@ class QueueRepository {
     );
     return items.length;
   }
+
+  /// Fetches pending jobs ordered by priority then creation date (oldest first)
+  Future<List<QueueItem>> getPendingJobs() async {
+    final db = await _dbHelper.database;
+    final List<Map<String, dynamic>> maps = await db.query(
+      'queue_items',
+      where: 'status = 0 OR status = 1', // PENDING (0) or SENDING (1) - though SENDING should be handled carefully
+      orderBy: 'priority DESC, createdAt ASC',
+    );
+    return maps.map((map) => QueueItem.fromMap(map)).toList();
+  }
+
+  /// Updates the status of a specific queue item
+  Future<void> updateJobStatus(String queueId, QueueStatus status, {int? retryCount, String? errorMessage}) async {
+    final db = await _dbHelper.database;
+    await db.update(
+      'queue_items',
+      {
+        'status': status.index,
+        if (retryCount != null) 'retryCount': retryCount,
+        if (errorMessage != null) 'errorMessage': errorMessage,
+      },
+      where: 'queueId = ?',
+      whereArgs: [queueId],
+    );
+  }
 }
 
 // Simple UUID helper since we don't have a package yet
