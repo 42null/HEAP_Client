@@ -94,22 +94,25 @@ class _EditScreenState extends State<EditScreen> {
     }
   }
 
-  void _handleFieldUpdate(String fieldIdentifier, String newValue) {
+  void _handleFieldUpdate(String fieldIdentifier, String newValue, bool pending) {
     if (widget.item != null) {
-      ItemRepository.repository.updateFieldLive(widget.item!.id, fieldIdentifier, newValue);
+      ItemRepository.repository.updateFieldLive(widget.item!.id, fieldIdentifier, newValue, pending, new EditorSource(sourceType: SourceType.USER, name: "AppUser"));
     }
   }
 
-  // Unified logic to handle both commit and temp storage
+  // Unified logic to pass both pending and temp item updates
   void _onSubmitSave(String fieldIdentifier, String value, {bool pending=false}) {
+
     if (!pending) {
       // Logic for pressing Enter / explicit save
-      _handleFieldUpdate(fieldIdentifier, value);
+      _handleFieldUpdate(fieldIdentifier, value, pending);
     } else {
       // Logic for losing focus / "auto-save" to temp storage
       print('Saving $fieldIdentifier to temporary storage: $value');
+      // Unfocus the field
       FocusManager.instance.primaryFocus?.unfocus();
-    // Unfocus the box
+      _handleFieldUpdate(fieldIdentifier, value, pending);
+
 
 
     // TODO: bring in
@@ -205,7 +208,7 @@ class _EditScreenState extends State<EditScreen> {
                           focusNode: _focusNodes['priority'],
                           keyboardType: TextInputType.number,
                           onSubmitted: (value) => _onSubmitSave('priority', value),
-                          onTapOutside: (event) => _onSubmitSave('priority', _titleController.text, pending: true),
+                          onTapOutside: (event) => _onSubmitSave('priority', _priorityController.text, pending: true),
                           decoration: InputDecoration(
                             border: OutlineInputBorder(),
                             hintText: 'Enter priority',
