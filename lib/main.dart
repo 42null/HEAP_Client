@@ -6,6 +6,8 @@ import 'package:sqflite_common_ffi/sqflite_common_ffi.dart';
 
 import 'Screens/core_page.dart';
 import 'Screens/item_list_screen.dart';
+import 'data/api_config.dart';
+
 
 
 void main() async {
@@ -14,6 +16,9 @@ void main() async {
   if (Platform.isLinux || Platform.isWindows || Platform.isMacOS) {
     databaseFactory = databaseFactoryFfi;
   }
+
+  // Load credentials from native secure storage (no-op if not yet configured).
+  await ApiConfig.load();
 
   runApp(const HEAPApp());
 }

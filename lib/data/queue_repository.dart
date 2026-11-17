@@ -2,38 +2,62 @@ import 'dart:async';
 import 'dart:math';
 import 'package:sqflite/sqflite.dart';
 import '../models/job.dart';
+import 'api_service.dart';
 import 'database.dart';
 import '../models/queue_item.dart';
 
 class QueueRepository {
   final DatabaseHelper _dbHelper = DatabaseHelper.Instance;
+  final ApiService _apiService = ApiService();
 
   Future<void> enqueue(String payload, int itemId, {int priority = 0, JobType jobType = JobType.FILL_IN_REQUEST}) async {
-    final db = await _dbHelper.database;
-    final jobId = Guid.newString();
-    
-    // Save the job details separately
-    final newJob = Job(
-      jobId: jobId,
-      itemId: itemId,
-      jobType: jobType,
-      payload: payload,
-      priority: priority,
-    );
+    final newJobData = {
+      'title': payload,
+      'priority': priority,
+      'progressStatus': 'BACKLOG', // Default status for new items
+    };
 
-    await db.insert('jobs', newJob.toMap());
+    try {
+      await _apiService.postItem(newJobData);
+      // Also save to local DB so it's part of the persistent list
+      final db = await _dbHelper.database;
+      final newItem = QueueItem(
+        queueId: Guid.newString(), // We use a random GUID because postItem doesn't return an ID yet
+        itemId: itemId,
+        jobId: Guid.newString(),
+        payload: payload,
+        priority: priority,
+        createdAt: DateTime.now().millisecondsSinceEpoch,
+      );
+      await db.insert('queue_items', newItem.toMap());
+    } catch (e) {
+      // Fallback to local DB if API fails
+      final db = await _dbHelper.database;
+      final jobId = Guid.newString();
 
-    // Save the queue item for processing
-    final newItem = QueueItem(
-      queueId: Guid.newString(),
-      itemId: itemId,
-      jobId: jobId,
-      payload: payload, // Still keeping it here so the UI tracker works easily
-      priority: priority,
-      createdAt: DateTime.now().millisecondsSinceEpoch,
-    );
-    
-    await db.insert('queue_items', newItem.toMap());
+      // Save the job details separately
+      final newJob = Job(
+        jobId: jobId,
+        itemId: itemId,
+        jobType: jobType,
+        payload: payload,
+        priority: priority,
+      );
+
+      await db.insert('jobs', newJob.toMap());
+
+      // Save the queue item for processing
+      final newItem = QueueItem(
+        queueId: Guid.newString(),
+        itemId: itemId,
+        jobId: jobId,
+        payload: payload, // Still keeping it here so the UI tracker works easily
+        priority: priority,
+        createdAt: DateTime.now().millisecondsSinceEpoch,
+      );
+
+      await db.insert('queue_items', newItem.toMap());
+    }
   }
 
   Future<void> removeItem(String id) async {
@@ -42,8 +66,8 @@ class QueueRepository {
   }
 
   Stream<List<QueueItem>> getQueueStream() async* {
-    final db = await _dbHelper.database;
     while (true) {
+      final db = await _dbHelper.database;
       final List<Map<String, dynamic>> maps = await db.query(
         'queue_items',
         orderBy: 'priority DESC, createdAt ASC',
@@ -55,9 +79,10 @@ class QueueRepository {
 
   Future<int> getPosition(String id) async {
     final db = await _dbHelper.database;
+    // Changed 'id' to 'queueId' to match the primary key name in database
     final List<Map<String, dynamic>> items = await db.query(
       'queue_items',
-      where: 'id = ? AND status != 3', // Not completed
+      where: 'queueId = ? AND status != 3', // Not completed
       whereArgs: [id],
       orderBy: 'priority DESC, createdAt ASC',
     );
@@ -69,10 +94,22 @@ class QueueRepository {
     final db = await _dbHelper.database;
     final List<Map<String, dynamic>> maps = await db.query(
       'queue_items',
-      where: 'status = 0 OR status = 1', // PENDING (0) or SENDING (1) - though SENDING should be handled carefully
+      where: 'status = 0 OR status = 1', // PENDING (0) or SENDING (1)
       orderBy: 'priority DESC, createdAt ASC',
     );
     return maps.map((map) => QueueItem.fromMap(map)).toList();
+  }
+
+  /// Syncs items from API to local database
+  Future<void> _syncItemsToDb(List<QueueItem> items) async {
+    final db = await _dbHelper.database;
+    for (var item in items) {
+      await db.insert(
+        'queue_items',
+        item.toMap(),
+        conflictAlgorithm: ConflictAlgorithm.replace,
+      );
+    }
   }
 
   /// Updates the status of a specific queue item

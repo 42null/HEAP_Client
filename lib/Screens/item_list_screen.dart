@@ -4,13 +4,24 @@ import '../data/item_repository.dart';
 import '../widgets/pill_box.dart';
 import '../models/item.dart';
 
-class ItemListScreen extends StatelessWidget {
+class ItemListScreen extends StatefulWidget {
   final Function(Item) onItemSelected;
 
   const ItemListScreen({
     super.key,
     required this.onItemSelected,
   });
+
+  @override
+  State<ItemListScreen> createState() => _ItemListScreenState();
+}
+
+class _ItemListScreenState extends State<ItemListScreen> {
+  @override
+  void initState() {
+    super.initState();
+    ItemRepository.repository.fetchItems();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -32,7 +43,7 @@ class ItemListScreen extends StatelessWidget {
                 ),
                 child: ListTile(
                   onTap: () {
-                    onItemSelected(item);
+                    widget.onItemSelected(item);
                   },
                   leading: Container(
                     width: 12,
@@ -49,7 +60,7 @@ class ItemListScreen extends StatelessWidget {
                       PillBox(
                         status: item.progressStatus,
                         onTap: () {
-                          onItemSelected(item);
+                          widget.onItemSelected(item);
                         },
                       ),
                     ],

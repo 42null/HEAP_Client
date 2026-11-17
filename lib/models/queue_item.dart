@@ -63,4 +63,31 @@ class QueueItem {
       errorMessage: map['errorMessage'] as String?,
     );
   }
+
+  // Helper for API mapping
+  factory QueueItem.fromApi(Map<String, dynamic> map) {
+    return QueueItem(
+      queueId: map['id'].toString(), // Use 'id' from API as queueId
+      itemId: (map['uncommitedItemId'] != -1 && map['uncommitedItemId'] != null)
+          ? (map['uncommitedItemId'] as num).toInt()
+          : 0,
+      jobId: '', // No jobId in current API response, maybe we set it later or leave empty
+      payload: map['title'] as String? ?? '',
+      jobType: JobType.FILL_IN_REQUEST, // Default for now as API doesn't specify
+      status: _mapProgressStatusToQueueStatus(map['progressStatus']),
+      priority: (map['priority'] as num?)?.toInt() ?? 0,
+      createdAt: DateTime.now().millisecondsSinceEpoch,
+    );
+  }
+
+  static QueueStatus _mapProgressStatusToQueueStatus(String? status) {
+    switch (status?.toUpperCase()) {
+      case 'BACKLOG': return QueueStatus.PENDING;
+      case 'SENDING': return QueueStatus.SENDING;
+      case 'PROCESSING': return QueueStatus.PROCESSING;
+      case 'COMPLETED': return QueueStatus.COMPLETED;
+      case 'FAILED': return QueueStatus.FAILED;
+      default: return QueueStatus.PENDING;
+    }
+  }
 }

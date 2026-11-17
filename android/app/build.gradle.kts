@@ -38,6 +38,10 @@ android {
     }
 }
 
+dependencies {
+    implementation("androidx.security:security-crypto:1.1.0-alpha06")
+}
+
 kotlin {
     compilerOptions {
         jvmTarget = org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17

@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import '../data/queue_repository.dart';
 import '../models/queue_item.dart';
 import '../data/database.dart';
+import '../data/api_status.dart';
+import '../data/api_config.dart';
 import '../services/job_executor.dart';
 
 class QueueTrackerScreen extends StatefulWidget {
@@ -15,24 +17,33 @@ class _QueueTrackerScreenState extends State<QueueTrackerScreen> {
   final QueueRepository _repository = QueueRepository();
   final TextEditingController _controller = TextEditingController();
   final TextEditingController _idController = TextEditingController();
+  final TextEditingController _usernameController = TextEditingController();
+  final TextEditingController _passwordController = TextEditingController();
   
   // Initialize the executor
   final JobExecutor _executor = JobExecutor();
+  final ApiStatus _apiStatus = ApiStatus.instance;
 
   @override
   void dispose() {
     _controller.dispose();
     _idController.dispose();
+    _usernameController.dispose();
+    _passwordController.dispose();
     _executor.stop(); // Ensure loop stops when screen is disposed
+    _apiStatus.dispose();
     super.dispose();
   }
 
   String _dbPath = "";
+  final IconData _apiStatusIcon = Icons.cloud_off;
+  final String _apiStatusText = "Checking db API…";
 
   @override
   void initState() {
     super.initState();
     _initDatabasePath();
+    _apiStatus.start();
     // Start the job executor in a background process
     _executor.start();
   }
@@ -65,7 +76,41 @@ class _QueueTrackerScreenState extends State<QueueTrackerScreen> {
     await _repository.removeItem(id);
   }
 
+  /// Saves the entered username/password as an encrypted secret in native
+  /// secure storage via [ApiConfig] (the same store that [ApiService] / [ApiStatus]
+  /// read from). Updates the running credentials immediately.
+  Future<void> _saveCredentials() async {
+    final username = _usernameController.text.trim();
+    final password = _passwordController.text;
+    if (username.isEmpty || password.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Username and password are required.')),
+      );
+      return;
+    }
+    try {
+      await ApiConfig.set(
+        baseUrl: ApiConfig.baseUrl,
+        username: username,
+        password: password,
+      );
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Credentials saved securely.')),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to save credentials: $e')),
+      );
+    }
+  }
+
   Color _getStatusColor(QueueStatus status) {
+    return _colorFor(status);
+  }
+
+  Color _colorFor(QueueStatus status) {
     switch (status) {
       case QueueStatus.PENDING:
         return Colors.blue;
@@ -82,24 +127,28 @@ class _QueueTrackerScreenState extends State<QueueTrackerScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Queue Tracker'),
-      ),
-      body: Column(
-        children: [
+    final colorScheme = Theme.of(context).colorScheme;
+    return ListenableBuilder(
+      listenable: _apiStatus,
+      builder: (context, _) {
+        return Scaffold(
+          appBar: AppBar(
+            title: const Text('Queue Tracker'),
+          ),
+          body: Column(
+            children: [
           // New Debug Info Area
           Container(
             padding: const EdgeInsets.all(12),
-            color: Colors.grey[800],
+            color: colorScheme.surfaceContainerHighest,
             child: StreamBuilder<ActiveJobInfo?>(
               stream: _executor.activeJobStream,
               builder: (context, snapshot) {
                 final active = snapshot.data;
                 if (active == null) {
-                  return const Text(
+                  return Text(
                     'No active execution.',
-                    style: TextStyle(color: Colors.white70),
+                    style: TextStyle(color: colorScheme.onSurfaceVariant),
                   );
                 }
                 return Column(
@@ -152,7 +201,7 @@ class _QueueTrackerScreenState extends State<QueueTrackerScreen> {
                         margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                         child: ListTile(
                           leading: CircleAvatar(
-                            backgroundColor: statusColor.withOpacity(0.2),
+                            backgroundColor: statusColor.withValues(alpha: 0.2),
                             child: Text('${index + 1}', style: TextStyle(color: statusColor)),
                           ),
                           title: Text(
@@ -186,7 +235,7 @@ class _QueueTrackerScreenState extends State<QueueTrackerScreen> {
                               const SizedBox(height: 4),
                               Text(
                                 'Job ID: ${queuedJob.jobId}, Type: ${queuedJob.jobType.name}',
-                                style: TextStyle(color: statusColor.withOpacity(0.8), fontSize: 12),
+                                style: TextStyle(color: statusColor.withValues(alpha: 0.8), fontSize: 12),
                               ),
                             ],
                           ),
@@ -225,6 +274,47 @@ class _QueueTrackerScreenState extends State<QueueTrackerScreen> {
                     style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                   ),
                   const SizedBox(height: 16),
+                  // Secrets input: store username/password in native secure storage.
+                  Card(
+                    elevation: 0,
+                    margin: const EdgeInsets.only(bottom: 16),
+                    child: Padding(
+                      padding: const EdgeInsets.all(16.0),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          Text(
+                            'API Credentials',
+                            style: TextStyle(fontWeight: FontWeight.bold, color: colorScheme.onSurface),
+                          ),
+                          const SizedBox(height: 12),
+                          TextField(
+                            controller: _usernameController,
+                            decoration: InputDecoration(
+                              prefixIcon: Icon(Icons.person_outline),
+                              border: const OutlineInputBorder(),
+                              labelText: 'Username',
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          TextField(
+                            controller: _passwordController,
+                            obscureText: true,
+                            decoration: InputDecoration(
+                              prefixIcon: Icon(Icons.lock_outline),
+                              border: const OutlineInputBorder(),
+                              labelText: 'Password',
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+                          ElevatedButton(
+                            onPressed: _saveCredentials,
+                            child: const Text('Save Credentials'),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
                   Row(
                     children: [
                       Expanded(
@@ -262,18 +352,38 @@ class _QueueTrackerScreenState extends State<QueueTrackerScreen> {
           const Divider(thickness: 2, height: 2),
           Container(
             padding: const EdgeInsets.all(16.0),
-            color: Colors.grey[200],
+            color: colorScheme.surface,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                const Text('Database Path:', style: TextStyle(fontWeight: FontWeight.bold)),
+                Text('Database Path:', style: TextStyle(fontWeight: FontWeight.bold, color: colorScheme.onSurface)),
                 const SizedBox(height: 8),
                 SelectableText(_dbPath),
+                const SizedBox(height: 12),
+                ListenableBuilder(
+                  listenable: _apiStatus,
+                  builder: (context, _) {
+                    return Row(
+                      children: [
+                        Icon(_apiStatusIcon, size: 18),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            _apiStatusText,
+                            style: TextStyle(fontWeight: FontWeight.w600, color: colorScheme.onSurface),
+                          ),
+                        ),
+                      ],
+                    );
+                  },
+                ),
               ],
             ),
           ),
-        ],
-      ),
+            ],
+          ),
+        );
+      },
     );
   }
 }
