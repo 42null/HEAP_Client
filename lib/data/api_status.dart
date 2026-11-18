@@ -35,17 +35,20 @@ class ApiStatus extends ChangeNotifier {
   static final ApiStatus instance = ApiStatus._internal();
 
   ApiConnectionStatus _status = ApiConnectionStatus.checking;
+  String? _lastErrorMessage;
 
   ApiConnectionStatus get connectionStatus => _status;
+  String? get lastErrorMessage => _lastErrorMessage;
 
   /// Runs a single connectivity + authentication check and updates the state
   /// accordingly:
   ///  - not reachable     -> ApiConnectionStatus.unreachable
   ///  - reachable + auth ok -> ApiConnectionStatus.connected
   ///  - reachable + auth fail -> ApiConnectionStatus.unauthorized
-  ///  - unexpected error  -> ApiConnectionStatus.error
+  ///  - unexpected error   -> ApiConnectionStatus.error
   void check() {
     _status = ApiConnectionStatus.checking;
+    _lastErrorMessage = null;
     notifyListeners();
     ApiService().checkReachable().then((reachable) async {
       if (!reachable) {
@@ -53,11 +56,18 @@ class ApiStatus extends ChangeNotifier {
         notifyListeners();
         return;
       }
-      final authenticated = await ApiService().authenticate();
-      _status = authenticated ? ApiConnectionStatus.connected : ApiConnectionStatus.unauthorized;
-      notifyListeners();
-    }).catchError((_) {
-      _status = ApiConnectionStatus.error;
+      try {
+        final authenticated = await ApiService().authenticate();
+        _status = authenticated ? ApiConnectionStatus.connected : ApiConnectionStatus.unauthorized;
+        notifyListeners();
+      } catch (e) {
+        _status = ApiConnectionStatus.unauthorized;
+        _lastErrorMessage = e.toString();
+        notifyListeners();
+      }
+    }).catchError((e) {
+      _status = ApiConnectionStatus.unreachable;
+      _lastErrorMessage = e.toString();
       notifyListeners();
     });
   }

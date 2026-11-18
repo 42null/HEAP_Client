@@ -19,7 +19,8 @@ class _QueueTrackerScreenState extends State<QueueTrackerScreen> {
   final TextEditingController _idController = TextEditingController();
   final TextEditingController _usernameController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
-  
+  final TextEditingController _baseUrlController = TextEditingController();
+
   // Initialize the executor
   final JobExecutor _executor = JobExecutor();
   final ApiStatus _apiStatus = ApiStatus.instance;
@@ -30,19 +31,18 @@ class _QueueTrackerScreenState extends State<QueueTrackerScreen> {
     _idController.dispose();
     _usernameController.dispose();
     _passwordController.dispose();
+    _baseUrlController.dispose();
     _executor.stop(); // Ensure loop stops when screen is disposed
     _apiStatus.dispose();
     super.dispose();
   }
 
   String _dbPath = "";
-  final IconData _apiStatusIcon = Icons.cloud_off;
-  final String _apiStatusText = "Checking db API…";
-
   @override
   void initState() {
     super.initState();
     _initDatabasePath();
+    _loadCredentials();
     _apiStatus.start();
     // Start the job executor in a background process
     _executor.start();
@@ -53,6 +53,20 @@ class _QueueTrackerScreenState extends State<QueueTrackerScreen> {
     setState(() {
       _dbPath = db.path;
     });
+  }
+
+  /// Loads the stored username/password from secure storage (via [ApiConfig],
+  /// which [ApiConfig.load] in main already populated) and pre-fills the
+  /// credential fields so the user sees the active credentials. The running
+  /// [ApiStatus] poll already authenticates with these same values.
+  Future<void> _loadCredentials() async {
+    try {
+      _usernameController.text = ApiConfig.username;
+      _passwordController.text = ApiConfig.password;
+      _baseUrlController.text = ApiConfig.baseUrl;
+    } catch (_) {
+      // Ignore read errors; fall back to empty fields.
+    }
   }
 
   Future<void> _handleAddTask() async {
@@ -82,15 +96,16 @@ class _QueueTrackerScreenState extends State<QueueTrackerScreen> {
   Future<void> _saveCredentials() async {
     final username = _usernameController.text.trim();
     final password = _passwordController.text;
-    if (username.isEmpty || password.isEmpty) {
+    final baseUrl = _baseUrlController.text.trim();
+    if (username.isEmpty || password.isEmpty || baseUrl.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Username and password are required.')),
+        const SnackBar(content: Text('Username, password, and Base URL are required.')),
       );
       return;
     }
     try {
       await ApiConfig.set(
-        baseUrl: ApiConfig.baseUrl,
+        baseUrl: baseUrl,
         username: username,
         password: password,
       );
@@ -122,6 +137,38 @@ class _QueueTrackerScreenState extends State<QueueTrackerScreen> {
         return Colors.green;
       case QueueStatus.FAILED:
         return Colors.red;
+    }
+  }
+
+  /// Returns the icon and text that reflect the live API connection status.
+  /// This is the single source of truth for what the UI shows.
+  IconData _apiStatusIcon() {
+    switch (_apiStatus.connectionStatus) {
+      case ApiConnectionStatus.connected:
+        return Icons.cloud_done;
+      case ApiConnectionStatus.unauthorized:
+        return Icons.cloud_off;
+      case ApiConnectionStatus.unreachable:
+        return Icons.cloud_off;
+      case ApiConnectionStatus.checking:
+        return Icons.cloud_queue;
+      case ApiConnectionStatus.error:
+        return Icons.error_outline;
+    }
+  }
+
+  String _apiStatusText() {
+    switch (_apiStatus.connectionStatus) {
+      case ApiConnectionStatus.connected:
+        return 'Connected to db API';
+      case ApiConnectionStatus.unauthorized:
+        return 'db API reachable but credentials rejected';
+      case ApiConnectionStatus.unreachable:
+        return 'Cannot reach db API';
+      case ApiConnectionStatus.checking:
+        return 'Checking db API…';
+      case ApiConnectionStatus.error:
+        return 'db API error';
     }
   }
 
@@ -262,7 +309,6 @@ class _QueueTrackerScreenState extends State<QueueTrackerScreen> {
             ),
           ),
           const Divider(thickness: 2, height: 2),
-          const SizedBox(height: 16),
           Expanded(
             child: Padding(
               padding: const EdgeInsets.all(16.0),
@@ -304,6 +350,15 @@ class _QueueTrackerScreenState extends State<QueueTrackerScreen> {
                               prefixIcon: Icon(Icons.lock_outline),
                               border: const OutlineInputBorder(),
                               labelText: 'Password',
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          TextField(
+                            controller: _baseUrlController,
+                            decoration: InputDecoration(
+                              prefixIcon: Icon(Icons.link_off),
+                              border: const OutlineInputBorder(),
+                              labelText: 'Base URL',
                             ),
                           ),
                           const SizedBox(height: 16),
@@ -365,11 +420,11 @@ class _QueueTrackerScreenState extends State<QueueTrackerScreen> {
                   builder: (context, _) {
                     return Row(
                       children: [
-                        Icon(_apiStatusIcon, size: 18),
+                        Icon(_apiStatusIcon(), size: 18),
                         const SizedBox(width: 8),
                         Expanded(
                           child: Text(
-                            _apiStatusText,
+                            _apiStatusText(),
                             style: TextStyle(fontWeight: FontWeight.w600, color: colorScheme.onSurface),
                           ),
                         ),
@@ -377,6 +432,16 @@ class _QueueTrackerScreenState extends State<QueueTrackerScreen> {
                     );
                   },
                 ),
+                const SizedBox(height: 8),
+                Text('Base URL: ${ApiConfig.baseUrl}', style: TextStyle(fontWeight: FontWeight.bold, color: colorScheme.onSurface)),
+                if (_apiStatus.lastErrorMessage != null)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 8),
+                    child: Text(
+                      'Last Error: ${_apiStatus.lastErrorMessage}',
+                      style: TextStyle(color: Colors.red, fontSize: 12),
+                    ),
+                  ),
               ],
             ),
           ),

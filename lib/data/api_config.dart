@@ -44,15 +44,18 @@ class ApiConfig {
         final storedUsername = await _storage.read(key: 'heap_api_username');
 
         password = storedPassword;
-        baseUrl = storedBaseUrl ?? baseUrl;
-        username = storedUsername ?? username;
+        // Use the stored value if it's not null and not empty, otherwise keep the current (default) value.
+        if (storedBaseUrl != null && storedBaseUrl.isNotEmpty) {
+          baseUrl = storedBaseUrl.trim();
+        }
+        if (storedUsername != null && storedUsername.isNotEmpty) {
+          username = storedUsername.trim();
+        }
       }
     } catch (_) {
       // Ignore read errors; fall back to defaults.
     }
   }
-
-
 
   /// Writes all three credentials to secure storage (encrypted).
   static Future<void> set({required String baseUrl, required String username, required String password}) async {
@@ -62,11 +65,11 @@ class ApiConfig {
     );
     await _storage.write(
       key: 'heap_api_base_url',
-      value: baseUrl,
+      value: baseUrl.trim(),
     );
     await _storage.write(
       key: 'heap_api_username',
-      value: username,
+      value: username.trim(),
     );
   }
 }
