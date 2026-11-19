@@ -51,7 +51,9 @@ class ApiService {
       final response = await http
           .get(Uri.parse(url), headers: _headers)
           .timeout(const Duration(seconds: 5));
-      dev.log('Health check response: ${response.statusCode} - ${response.body}');
+      if(response.statusCode != 200){
+        dev.log('Health check response: ${response.statusCode} - ${response.body}');
+      }
       return response.statusCode == 200;
     } catch (e) {
       dev.log('Health check failed: $e');
@@ -81,6 +83,21 @@ class ApiService {
     }
   }
 
+  Future<Map<String, dynamic>> getItemById(int id) async {
+    final baseUrl = _getValidBaseUrl();
+    final url = '$baseUrl/items/$id';
+
+    dev.log('Fetching item $id from: $url');
+    final response = await http.get(Uri.parse(url), headers: _headers);
+
+    if (response.statusCode != 200) {
+      dev.log('Failed to fetch item $id: ${response.statusCode} - ${response.body}');
+      throw Exception('Failed to fetch item: ${response.body}');
+    }
+
+    return Map<String, dynamic>.from(jsonDecode(response.body));
+  }
+
   Future<void> postItem(Map<String, dynamic> data) async {
     final baseUrl = _getValidBaseUrl();
     final url = '$baseUrl/items';
@@ -98,6 +115,23 @@ class ApiService {
     }
   }
 
+  Future<void> updateItem(int id, Map<String, dynamic> data) async {
+    final baseUrl = _getValidBaseUrl();
+    final url = '$baseUrl/items/$id';
+
+    dev.log('Updating item $id at: $url | Data: $data');
+    final response = await http.put(
+      Uri.parse(url),
+      headers: _headers,
+      body: jsonEncode(data),
+    );
+
+    if (response.statusCode != 200 && response.statusCode != 204 && response.statusCode != 201) {
+      dev.log('Failed to update item $id: ${response.statusCode} - ${response.body}');
+      throw Exception('Failed to update item: ${response.body}');
+    }
+  }
+
   Future<List<Map<String, dynamic>>> getItems() async {
     final baseUrl = _getValidBaseUrl();
     final url = '$baseUrl/items';
@@ -110,6 +144,8 @@ class ApiService {
       throw Exception('Failed to fetch items: ${response.body}');
     }
 
-    return jsonDecode(response.body) as List<Map<String, dynamic>>;
+    final List<dynamic> decoded = jsonDecode(response.body);
+    dev.log('Items received count: ${decoded.length}');
+    return decoded.map((e) => Map<String, dynamic>.from(e)).toList();
   }
 }

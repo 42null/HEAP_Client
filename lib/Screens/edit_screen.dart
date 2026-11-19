@@ -31,11 +31,21 @@ class _EditScreenState extends State<EditScreen> {
   @override
   void initState() {
     super.initState();
-    _titleController = TextEditingController(text: widget.item?.title.toString());
-    _priorityController = TextEditingController(text: widget.item?.priority?.toString());
+    _titleController = TextEditingController(text: widget.item?.title?.value ?? '');
+    _priorityController = TextEditingController(text: widget.item?.priority?.toString() ?? '');
     _selectedStatus = widget.item?.progressStatus ?? ProgressStatus.UNSET;
 
     // We no longer use listeners here as we'll handle updates via onSubmitted and focus change
+  }
+
+  @override
+  void didUpdateWidget(EditScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.item != oldWidget.item) {
+      _titleController.text = widget.item?.title?.value ?? '';
+      _priorityController.text = widget.item?.priority?.toString() ?? '';
+      _selectedStatus = widget.item?.progressStatus ?? ProgressStatus.UNSET;
+    }
   }
 
   @override
@@ -48,12 +58,16 @@ class _EditScreenState extends State<EditScreen> {
 
   void _saveItem() {
     if (widget.item != null) {
-      // ItemRepository.repository.saveItem(updatedItem); //@@@
-
-
-
-
-
+      final updatedItem = Item(
+        id: widget.item!.id,
+        title: ItemTitle(
+          value: _titleController.text,
+          editorSource: EditorSource(sourceType: SourceType.USER, name: "Editor"),
+        ),
+        priority: int.tryParse(_priorityController.text),
+        progressStatus: _selectedStatus,
+      );
+      ItemRepository.repository.updateItem(updatedItem);
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

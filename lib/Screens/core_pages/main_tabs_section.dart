@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 // Screens
+import '../../data/item_repository.dart';
 import '../item_list_screen.dart';
 import '../edit_screen.dart';
 
@@ -62,6 +63,16 @@ class _MainTabsSectionState extends State<MainTabsSection> {
                         setState(() {
                           _selectedItem = item;
                         });
+                        
+                        // Pull the latest version from the server
+                        ItemRepository.repository.fetchItemById(item.id).then((_) {
+                          if (mounted) {
+                            setState(() {
+                              _selectedItem = ItemRepository.repository.getItemById(item.id);
+                            });
+                          }
+                        });
+                        
                         DefaultTabController.of(context).animateTo(3);
                       },
                     );

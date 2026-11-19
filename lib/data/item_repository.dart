@@ -1,3 +1,4 @@
+import 'dart:developer' as dev;
 import 'package:flutter/material.dart';
 import '../models/base_model.dart';
 import '../models/item.dart';
@@ -43,12 +44,39 @@ class ItemRepository extends ChangeNotifier {
     }
   }
 
+  Future<void> fetchItemById(int id) async {
+    try {
+      final map = await ApiService().getItemById(id);
+      final item = Item(
+        id: map['id'] as int,
+        title: ItemTitle(value: map['title'] as String, editorSource: EditorSource(sourceType: SourceType.USER, name: "API")),
+        priority: (map['priority'] as num?)?.toInt() ?? 0,
+        progressStatus: _mapProgressStatus(map['progressStatus'] as String?),
+      );
+      
+      int index = _items.indexWhere((item) => item.id == id);
+      if (index != -1) {
+        _items[index] = item;
+      } else {
+        _items.add(item);
+      }
+      notifyListeners();
+    } catch (e) {
+      print("Error fetching item by id: $e");
+    }
+  }
+
   Item? getItemById(int id) {
     try {
       return _items.firstWhere((item) => item.id == id);
     } catch (e) {
       return null;
     }
+  }
+
+  void createItem(Item newItem) {
+    _items.add(newItem);
+    notifyListeners();
   }
 
   void updateItem(Item newItem) {
@@ -59,11 +87,15 @@ class ItemRepository extends ChangeNotifier {
       _items.add(newItem);
     }
     notifyListeners();
-  }
 
-  void createItem(Item newItem) {
-    _items.add(newItem);
-    notifyListeners();
+    final Map<String, dynamic> data = {
+      'title': newItem.title?.value,
+      'priority': newItem.priority,
+      'progressStatus': newItem.progressStatus.name,
+    };
+    ApiService().updateItem(newItem.id, data).catchError((e) {
+      print("Error updating item on server: $e");
+    });
   }
 
   /// Updates a specific field of an item live.
@@ -77,13 +109,29 @@ class ItemRepository extends ChangeNotifier {
       switch (fieldIdentifier) {
         case 'title':
           item.title = ItemTitle(value: newValue, editorSource: editorSource);
-          // API request here
           break;
         case 'priority':
-          print("Not applying to other fields right now");
+          item.priority = int.tryParse(newValue);
           break;
         default:
           break;
+      }
+      notifyListeners();
+
+      final Map<String, dynamic> data = {};
+      if (fieldIdentifier == 'title') {
+        data['title'] = item.title?.value;
+      } else if (fieldIdentifier == 'priority') {
+        data['priority'] = item.priority;
+      }
+      // For status, it's not currently handled in updateFieldLive, but could be.
+      
+      if (data.isNotEmpty) {
+        ApiService().updateItem(id, data).then((_) {
+          dev.log('Successfully updated item $id on server');
+        }).catchError((e) {
+          dev.log('Failed to update item $id on server: $e');
+        });
       }
     }
   }

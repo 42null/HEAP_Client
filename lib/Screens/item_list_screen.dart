@@ -20,6 +20,7 @@ class _ItemListScreenState extends State<ItemListScreen> {
   @override
   void initState() {
     super.initState();
+    // Fetch items from the repository, which is wired to the ApiService
     ItemRepository.repository.fetchItems();
   }
 
@@ -29,8 +30,32 @@ class _ItemListScreenState extends State<ItemListScreen> {
       listenable: ItemRepository.repository,
       builder: (context, _) {
         final items = ItemRepository.repository.items;
+
+        if (items.isEmpty) {
+          return Scaffold(
+            body: Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.nineteen_mp, size: 64, color: Colors.grey),
+                  const SizedBox(height: 16),
+                  const Text('No items found in the database.'),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Ensure your credentials are correct and the API is reachable.',
+                    style: TextStyle(color: Colors.grey.shade600),
+                  ),
+                ],
+              ),
+            ),
+          );
+        }
+
         return Scaffold(
-          // appBar: AppBar(title: const Text('HEAP')),
+          appBar: AppBar(
+            title: const Text('Database Items'),
+            elevation: 0,
+          ),
           body: ListView.builder(
             itemCount: items.length,
             itemBuilder: (context, index) {
@@ -53,7 +78,10 @@ class _ItemListScreenState extends State<ItemListScreen> {
                       shape: BoxShape.circle,
                     ),
                   ),
-                  title: Text(item.title.toString()),
+                  title: Text(
+                    item.title?.value ?? 'No Title',
+                    style: const TextStyle(fontWeight: FontWeight.w500),
+                  ),
                   subtitle: Row(
                     children: [
                       const Text('Status: '),
@@ -65,7 +93,10 @@ class _ItemListScreenState extends State<ItemListScreen> {
                       ),
                     ],
                   ),
-                  trailing: Text('P${item.priority ?? '-'}'),
+                  trailing: Text(
+                    'P${item.priority ?? '-'}',
+                    style: const TextStyle(fontWeight: FontWeight.bold),
+                  ),
                 ),
               );
             },
