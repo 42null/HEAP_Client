@@ -93,10 +93,27 @@ class _ItemListScreenState extends State<ItemListScreen> {
                       ),
                     ],
                   ),
-                  trailing: Text(
-                    'P${item.priority ?? '-'}',
-                    style: const TextStyle(fontWeight: FontWeight.bold),
-                  ),
+                  trailing: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      'P${item.priority ?? '-'}',
+                      style: const TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                    const SizedBox(width: 8),
+                    IconButton(
+                      icon: const Icon(Icons.delete, color: Colors.red),
+                      onPressed: () async {
+                        await ItemRepository.repository.deleteItem(item.id);
+                        if (mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('Item deleted successfully')),
+                          );
+                        }
+                      },
+                    ),
+                  ],
+                ),
                 ),
               );
             },

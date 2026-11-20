@@ -318,6 +318,18 @@ class _EditScreenState extends State<EditScreen> {
                         onPressed: _saveItem,
                         child: const Text('Save'),
                       ),
+                      const SizedBox(width: 8),
+                      IconButton(
+                        icon: const Icon(Icons.delete, color: Colors.red),
+                        onPressed: () async {
+                          if (widget.item != null) {
+                            await ItemRepository.repository.deleteItem(widget.item!.id);
+                            if (mounted) {
+                              Navigator.pop(context);
+                            }
+                          }
+                        },
+                      ),
                     ],
                   ),
                   const SizedBox(height: 24),

@@ -132,6 +132,19 @@ class ApiService {
     }
   }
 
+  Future<void> deleteItem(int id) async {
+    final baseUrl = _getValidBaseUrl();
+    final url = '$baseUrl/items/$id';
+
+    dev.log('Deleting item $id at: $url');
+    final response = await http.delete(Uri.parse(url), headers: _headers);
+
+    if (response.statusCode != 200 && response.statusCode != 204) {
+      dev.log('Failed to delete item $id: ${response.statusCode} - ${response.body}');
+      throw Exception('Failed to delete item: ${response.body}');
+    }
+  }
+
   Future<List<Map<String, dynamic>>> getItems() async {
     final baseUrl = _getValidBaseUrl();
     final url = '$baseUrl/items';

@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'dart:async';
 import '../../models/item.dart';
 import '../../data/item_repository.dart';
@@ -8,6 +7,8 @@ class EditScreen extends StatefulWidget {
   final Item? item;
 
   const EditScreen({super.key, this.item});
+
+  static const double labelWidth = 100.0;
 
   @override
   State<EditScreen> createState() => _EditScreenState();
@@ -21,6 +22,7 @@ class _EditScreenState extends State<EditScreen> {
   // Track the current state of the item for local updates
   Item? _currentLocalItem;
 
+  final Map<String, FocusNode> _focusNodes = {};
   final FocusNode _keyboardFocusNode = FocusNode();
 
   @override
@@ -31,33 +33,11 @@ class _EditScreenState extends State<EditScreen> {
     _priorityController = TextEditingController(text: widget.item?.priority?.toString() ?? '');
     _selectedStatus = widget.item?.progressStatus ?? ProgressStatus.UNSET;
 
-    // Create a mutable local copy for editing
-    // _currentLocalItem = widget.item?.setUncommited(
-    //   title: widget.item?.title,
-    //   priority: widget.item?.priority,
-    //   progressStatus: widget.item?.progressStatus,
-    // ) ?? Item(id: -1, progressStatus: ProgressStatus.UNSET); // -1 indicates a new item
+    // Initialize focus nodes
+    _focusNodes['title'] = FocusNode();
+    _focusNodes['priority'] = FocusNode();
 
-    // Add listener to controllers to update the local item state as user types
-    _titleController.addListener(_onTitleChanged);
-    _priorityController.addListener(_onPriorityChanged);
-  }
-
-  void _onTitleChanged() {
-    final newTitle = _titleController.text;
-    setState(() {
-      _currentLocalItem?.setUncommited(
-        titleText: newTitle,
-
-      );
-    });
-  }
-
-  void _onPriorityChanged() {
-    final newPriority = int.tryParse(_priorityController.text);
-    setState(() {
-      _currentLocalItem?.setUncommited(priority: newPriority);
-    });
+    // We no longer use listeners here as we'll handle updates via onSubmitted and focus change
   }
 
   // --- Core Saving Logic ---
@@ -85,16 +65,6 @@ class _EditScreenState extends State<EditScreen> {
     }
   }
 
-  // --- Key Event Handling (Ctrl+S) ---
-  void _handleKey(KeyEvent event) {
-    // Check for Ctrl+S
-    if (event is KeyDownEvent &&
-        event.logicalKey == LogicalKeyboardKey.keyS &&
-        HardwareKeyboard.instance.isControlPressed) {
-      _saveItem();
-    }
-  }
-
   @override
   void dispose() {
     // IMPORTANT: Save the data before the state is disposed (Auto-save on exit)
@@ -104,119 +74,262 @@ class _EditScreenState extends State<EditScreen> {
     _titleController.dispose();
     _priorityController.dispose();
     _keyboardFocusNode.dispose();
+    _focusNodes.forEach((key, node) {
+      node.dispose();
+    });
     super.dispose();
+  }
+
+  void _handleQueueAction(String value) {
+    debugPrint("Queue action for: $value");
+  }
+
+  void _onSubmitSave(String field, String? value, {bool pending = false}) {
+    if (field == 'title') {
+      _currentLocalItem?.setUncommited(titleText: value ?? '');
+    } else if (field == 'priority') {
+      _currentLocalItem?.setUncommited(priority: int.tryParse(value ?? ''));
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Text(widget.item == null ? 'New Item' : 'Edit Item'),
-      ),
-      body: KeyboardListener(
-        focusNode: _keyboardFocusNode,
-        onKeyEvent: _handleKey,
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Title Input
-              Row(
-                children: [
-                  Text('Title2', style: Theme.of(context).textTheme.titleLarge),
-                  BillButton(),
-                  const SizedBox(width: 8),
-                ],
+      body: Row(
+        children: [
+          // The "long box" on the left side to go back
+          GestureDetector(
+            onTap: () {
+              // Move to ItemListScreen (index 2)
+              DefaultTabController.of(context).animateTo(2);
+            },
+            child: Container(
+              width: 80,
+              color: Colors.grey[200],
+              child: const Center(
+                child: Icon(Icons.arrow_back, size: 40),
               ),
-              const SizedBox(height: 8),
-              TextField(
-                controller: _titleController,
-                autofocus: widget.item == null, // Auto-focus if creating a new item
-                decoration: const InputDecoration(
-                  border: OutlineInputBorder(),
-                  hintText: 'Enter item title',
-                ),
-              ),
-              const SizedBox(height: 20),
-              // Priority Input
-              Row(
-                children: [
-                  BillButton(),
-                  Text('Priority', style: Theme.of(context).textTheme.titleLarge),
-                  const SizedBox(width: 8),
-                ],
-              ),
-              const SizedBox(height: 8),
-              TextField(
-                controller: _priorityController,
-                keyboardType: TextInputType.number,
-                decoration: const InputDecoration(
-                  border: OutlineInputBorder(),
-                  hintText: 'Enter priority (0-10)',
-                ),
-              ),
-              const SizedBox(height: 20),
-              // Status Selection
-              Row(
-                children: [
-                  Text('Status', style: Theme.of(context).textTheme.titleLarge),
-                  const SizedBox(width: 8),
-                  BillButton(),
-                ],
-              ),
-              const SizedBox(height: 8),
-              DropdownButtonFormField<ProgressStatus>(
-                initialValue: _selectedStatus,
-                onChanged: (ProgressStatus? newValue) {
-                  setState(() {
-                    _selectedStatus = newValue!;
-                    _currentLocalItem?.setUncommited(progressStatus: newValue);
-                  });
-                },
-                items: ProgressStatus.values.map((status) {
-                  return DropdownMenuItem<ProgressStatus>(
-                    value: status,
-                    child: Text(status.name),
-                  );
-                }).toList(),
-              ),
-              const SizedBox(height: 40),
-              // Save Button
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: _saveItem,
-                  child: const Text('Save Item'),
-                ),
-              ),
-            ],
+            ),
           ),
-        ),
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    widget.item != null ? 'Edit Item (screen)' : 'New Item (screen)',
+                    style: Theme.of(context).textTheme.headlineMedium,
+                  ),
+                  const SizedBox(height: 24),
+                  Row(
+                    children: [
+                      SizedBox(width: EditScreen.labelWidth, child: const Text('Title')),
+                      const SizedBox(width: 6),
+                      QueueButton(onPressed: () => _handleQueueAction(_titleController.text)),
+                    ]
+                  ),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: TextField(
+                          controller: _titleController,
+                          focusNode: _focusNodes['title'],
+                          onSubmitted: (value) => _onSubmitSave('title', value),
+                          onTapOutside: (event) => _onSubmitSave('title', _titleController.text, pending: true),
+                          decoration: InputDecoration(
+                            border: OutlineInputBorder(),
+                            hintText: 'Enter title',
+                            suffixIcon: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                GestureDetector(
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                    decoration: BoxDecoration(
+                                      color: Colors.blue[50],
+                                      borderRadius: BorderRadius.circular(20),
+                                    ),
+                                    child: const Icon(Icons.playlist_add_circle, color: Colors.blue, size: 18),
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                IconButton(
+                                  icon: const Icon(Icons.clear),
+                                  onPressed: () => _titleController.clear(),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  Row(
+                    children: [
+                      SizedBox(width: EditScreen.labelWidth, child: const Text('Priority')),
+                      const SizedBox(width: 6),
+                      QueueButton(onPressed: () => _handleQueueAction(_priorityController.text)),
+                    ]
+                  ),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: TextField(
+                          controller: _priorityController,
+                          focusNode: _focusNodes['priority'],
+                          keyboardType: TextInputType.number,
+                          onSubmitted: (value) => _onSubmitSave('priority', value),
+                          onTapOutside: (event) => _onSubmitSave('priority', _priorityController.text, pending: true),
+                          decoration: InputDecoration(
+                            border: OutlineInputBorder(),
+                            hintText: 'Enter priority',
+                            suffixIcon: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                GestureDetector(
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                    decoration: BoxDecoration(
+                                      color: Colors.blue[50],
+                                      borderRadius: BorderRadius.circular(20),
+                                    ),
+                                    child: const Icon(Icons.playlist_add_circle, color: Colors.blue, size: 18),
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                IconButton(
+                                  icon: const Icon(Icons.clear),
+                                  onPressed: () => _priorityController.clear(),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  Row(
+                    children: [
+                      SizedBox(width: EditScreen.labelWidth, child: const Text('Status')),
+                      const SizedBox(width: 6),
+                      QueueButton(onPressed: () => _handleQueueAction(_selectedStatus.name)),
+                    ]
+                  ),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: DropdownButtonFormField<ProgressStatus>(
+                          value: _selectedStatus,
+                          onChanged: (value) {
+                            setState(() {
+                              _selectedStatus = value!;
+                            });
+                          },
+                          items: ProgressStatus.values.map((status) {
+                            return DropdownMenuItem<ProgressStatus>(
+                              value: status,
+                              child: Text(status.name),
+                            );
+                          }).toList(),
+                          decoration: InputDecoration(
+                            border: OutlineInputBorder(),
+                            hintText: 'Select status',
+                            suffixIcon: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                GestureDetector(
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                    decoration: BoxDecoration(
+                                      color: Colors.blue[50],
+                                      borderRadius: BorderRadius.circular(20),
+                                    ),
+                                    child: const Icon(Icons.playlist_add_circle, color: Colors.blue, size: 18),
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                IconButton(
+                                  icon: const Icon(Icons.clear),
+                                  onPressed: () => _selectedStatus = ProgressStatus.UNSET,
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const Spacer(),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      TextButton(
+                        onPressed: () {
+                          Navigator.pop(context);
+                        },
+                        child: const Text('Cancel'),
+                      ),
+                      const SizedBox(width: 8),
+                      ElevatedButton(
+                        onPressed: _saveItem,
+                        child: const Text('Save'),
+                      ),
+                      const SizedBox(width: 8),
+                      IconButton(
+                        icon: const Icon(Icons.delete, color: Colors.red),
+                        onPressed: () async {
+                          if (widget.item != null) {
+                            await ItemRepository().deleteItem(widget.item!.id);
+                            if (!mounted) return;
+                            Navigator.pop(context);
+                          }
+                        },
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 24),
+                ],
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
+
 }
 
-class BillButton extends StatefulWidget {
-  const BillButton({super.key});
+class QueueButton extends StatefulWidget {
+  final VoidCallback? onPressed;
+
+  const QueueButton({super.key, this.onPressed});
 
   @override
-  State<BillButton> createState() => _BillButtonState();
+  State<QueueButton> createState() => _QueueButtonState();
 }
 
-class _BillButtonState extends State<BillButton> {
+
+class _QueueButtonState extends State<QueueButton> {
   bool _isProcessing = false;
   double _progress = 0.0;
   bool _isPaused = false;
   Timer? _timer;
 
-  void _toggleBilling() {
+  void _toggleQueueing() {
+    if (widget.onPressed != null) {
+      widget.onPressed!();
+      return;
+    }
+
     if (!_isProcessing) {
       setState(() {
         _isProcessing = true;
         _progress = 0.0;
         _isPaused = false;
+
       });
       _startTimer();
     } else {
@@ -253,28 +366,31 @@ class _BillButtonState extends State<BillButton> {
   @override
   Widget build(BuildContext context) {
     return OutlinedButton(
-      onPressed: _toggleBilling,
+      onPressed: _toggleQueueing,
       style: OutlinedButton.styleFrom(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        minimumSize: const Size(100, 40),
+        minimumSize: Size(EditScreen.labelWidth, 20),
       ),
       child: _isProcessing
           ? Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Text('Billing...', style: TextStyle(fontSize: 10)),
-                const SizedBox(height: 4),
-                SizedBox(
-                  width: 80,
-                  child: LinearProgressIndicator(
-                    value: _progress,
-                    backgroundColor: Colors.grey[300],
-                    color: Colors.blue,
-                  ),
-                ),
-              ],
-            )
-          : const Text('Bill'),
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            _isPaused ? 'Paused' : 'Queued #${2}',
+            style: const TextStyle(fontSize: 10),
+          ),
+          const SizedBox(height: 4),
+          SizedBox(
+            width: 80,
+            child: LinearProgressIndicator(
+              value: _progress,
+              backgroundColor: Colors.grey[300],
+              color: Colors.blue,
+            ),
+          ),
+        ],
+      )
+          : const Text('Queue'),
     );
   }
 }

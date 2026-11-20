@@ -98,6 +98,16 @@ class ItemRepository extends ChangeNotifier {
     });
   }
 
+  Future<void> deleteItem(int id) async {
+    try {
+      await ApiService().deleteItem(id);
+      _items.removeWhere((item) => item.id == id);
+      notifyListeners();
+    } catch (e) {
+      print("Error deleting item: $e");
+    }
+  }
+
   /// Updates a specific field of an item live.
   /// [id] is the unique identifier of the item.
   /// [fieldIdentifier] specifies which field to update (e.g., 'title', 'priority').
